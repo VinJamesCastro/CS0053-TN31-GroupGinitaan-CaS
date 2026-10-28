@@ -69,19 +69,52 @@ g++ -std=c++17 -Wall main.cpp MenuController.cpp TransactionEngine.cpp FileStora
 ## 5. Sample CLI Output
 
 ```text
-+--------------------------------------------------+
-|           CENTS AND SENSIBILITY (CaS)            |
-|       Smart banking that makes good sense.       |
-+--------------------------------------------------+
-|  1. Login                                        |
-|  2. Register Account                             |
-|  3. About CaS                                    |
-|  4. Exit                                         |
-+--------------------------------------------------+
-  Select an option [1-4]: 1
+╭────────────────────────────────────────────────────────────────────╮
+│  CaS  /  CENTS AND SENSIBILITY                                     │
+│  Smart banking that makes good sense.                              │
+├────────────────────────────────────────────────────────────────────┤
+│  SESSION  Guest                                                    │
+│                                                                    │
+│  01  Login                    02  Register Account                 │
+│  03  About CaS                04  Exit                             │
+╰────────────────────────────────────────────────────────────────────╯
 
-  Account ID: ACC-000001
-  PIN: ****
+cas / guest › 01
 
-  Login successful. Welcome, Client!
+╭────────────────────────────────────────────────────────────────────╮
+│  SIGN IN                                                           │
+├────────────────────────────────────────────────────────────────────┤
+│  Account ID   ACC-000001                                           │
+│  PIN          ••••                                                 │
+│                                                                    │
+│  ✓  Welcome back, Maya Santos.                                     │
+╰────────────────────────────────────────────────────────────────────╯
+
+╭────────────────────────────────────────────────────────────────────╮
+│  CaS  /  CLIENT DASHBOARD                            ACC-000001    │
+│  Maya Santos  ·  Checking                                ACTIVE    │
+├────────────────────────────────────────────────────────────────────┤
+│  AVAILABLE BALANCE                                                 │
+│  PHP 24,580.50                                                     │
+├────────────────────────────────────────────────────────────────────┤
+│  YOUR BANKING                                                      │
+│                                                                    │
+│  01  Account summary         05  FX converter                      │
+│  02  Deposit funds           06  Transaction history               │
+│  03  Withdraw funds          07  Balance chart                     │
+│  04  Transfer funds          08  Export statement / receipt        │
+│  09  Logout                                                        │
+╰────────────────────────────────────────────────────────────────────╯
+
+cas / client › 02
+Deposit amount (PHP): 1,250.00
+
+╭────────────────────────────────────────────────────────────────────╮
+│  ✓  DEPOSIT COMPLETE                                               │
+├────────────────────────────────────────────────────────────────────┤
+│  Amount            + PHP 1,250.00                                  │
+│  Previous balance    PHP 24,580.50                                 │
+│  New balance         PHP 25,830.50                                 │
+│  Reference           TXN-000042                                    │
+╰────────────────────────────────────────────────────────────────────╯
 ```
