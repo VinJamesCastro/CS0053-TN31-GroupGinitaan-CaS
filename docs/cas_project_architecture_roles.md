@@ -1,110 +1,81 @@
-# Cents and Sensibility (CaS) — Technical Architecture & Group Member Roles
+# Cents and Sensibility (CaS): architecture and member roles
 
-**Tagline:** *Cents and Sensibility: Proof that smart banking makes good sense—down to the last cent.*
+CaS is a C++17 terminal banking application. This document assigns implementation ownership, explains how the modules cooperate, and gives each member a three-commit PR plan. The [shared development contract](cas_shared_development_contract.md) fixes the types, function interfaces, data format, and rules that let the four branches proceed in parallel.
 
----
+## Architecture and parallel workflow
 
-## Group Member Roles & Technical Synchronization
+```text
+CLI and session (Member 1)
+  |-- banking operations (Member 2)
+  |-- input validation and persistence (Member 3)
+  `-- charts and exports (Member 4)
+              ^
+       shared BankData snapshot
+```
 
-### Member 1: Repository Coordinator & Menu/Integration Lead
-- **Primary Scope:** Repository setup, state-driven CLI menu system, navigation routing, and user authentication.
-- **Assigned Features:**
-  - *State-Driven Modular CLI Navigation*
-  - *Multi-Tier User Authentication & Role-Based Access Control (RBAC)*
-- **Git Branch:** `feature/cli-menu-auth`
-- **Cyclic Reviewer Role:** Assigned Reviewer for **Member 2**.
+Member 3 loads `BankData` at startup. Member 2 applies a requested financial change to a **candidate copy** of that snapshot. Member 1 asks Member 3 to save the candidate and adopts it as the active state only if saving succeeds. Member 4 reads the active snapshot to produce charts and reports. This call order keeps menu navigation, business rules, file I/O, and output formatting in their assigned modules.
 
-#### CLI Menu Architecture & Exact Callback Mappings:
-1. **Guest Menu (Unauthenticated State):**
-   - `[1] Login`: Prompts credentials via Member 3's `getValidPIN()`, then calls Member 3's `validateCredentials(accountID, inputPIN)`.
-   - `[2] Register Account`: Collects info via Member 3's `getValidPIN()` and `getValidDouble()`, then calls Member 2's `createAccount(holderName, accountType, initialDeposit)`, and persists it via Member 3's `saveAccountRecord(newAccount)`.
-   - `[3] About CaS`: Displays bank summary and tagline.
-   - `[4] Exit`: Terminates main execution loop.
-2. **Client Dashboard Menu (Post-Client Login):**
-   - `[1] Account Summary`: Calls Member 2's `getAccountSummary(accountID)`.
-   - `[2] Deposit Funds`: Prompts amount via Member 3's `getValidDouble()`, then calls Member 2's `deposit(accountID, amount)`.
-   - `[3] Withdraw Funds`: Prompts amount via Member 3's `getValidDouble()`, then calls Member 2's `withdraw(accountID, amount)`.
-   - `[4] Peer-to-Peer Transfer`: Prompts recipient & amount, then calls Member 2's `transfer(senderID, receiverID, amount)`.
-   - `[5] FX Currency Converter`: Calls Member 2's `convertCurrency(amount, fromCurr, toCurr)`.
-   - `[6] Filter Transaction History`: Calls Member 3's `displayFilteredTransactions(accountID, startDate, endDate, type, minAmt, maxAmt)`.
-   - `[7] View Growth Chart`: Calls Member 4's `renderASCIIBalanceChart(accountID)`.
-   - `[8] Export Statement / Receipt`: Calls Member 4's `exportStatement(accountID)` or `generateReceipt(transactionID)`.
-   - `[9] Logout`: Resets session state to `SystemState::GUEST`.
-3. **Admin Dashboard Menu (Post-Admin Login):**
-   - `[1] View All Accounts`: Calls Member 3's `loadAllAccounts()`.
-   - `[2] Change Account Status`: Calls Member 2's `updateAccountStatus(accountID, newStatus)` and Member 3's `saveAllAccounts()`.
-   - `[3] System Audit Logs`: Calls Member 3's `readAuditLogs()`.
-   - `[4] Logout`: Resets session state to `SystemState::GUEST`.
+The project has no HTTP server or web endpoints. Its integration points are C++ headers and functions in the shared contract. Before feature work starts, commit that contract and its common `BankTypes.hpp` declarations to `main`; every member branches from that same revision. Each member owns a different set of implementation files and can work without waiting for the other features. Changes to a shared signature or persisted field need a reviewed contract update communicated to the affected owners.
 
-#### Defense & Quality Requirements:
-- **Individual Debugging Scenario:** Debugging state-loop stuck transitions (e.g., infinite re-entry into `CLIENT_MENU` on invalid input). Sets a breakpoint inside `handleClientMenu()` using VS Code / GDB to inspect `currentState` and clear `cin` flags.
-- **Refactoring & Formatting (`clang-format`) Evidence:** Captures before and after screenshots running `clang-format` on `MenuController.cpp` after refactoring monolithic `switch-case` blocks into modular handler functions.
+| Author | Feature branch | Implementation ownership | PR reviewer |
+| --- | --- | --- | --- |
+| Member 1 | `feature/cli-menu-auth` | `main.cpp`, `MenuController.*`, authentication and session routing | Member 4 |
+| Member 2 | `feature/transaction-engine` | `TransactionEngine.*`, account and financial rules | Member 1 |
+| Member 3 | `feature/file-storage-validation` | `FileStorage.*`, `InputValidator.*`, persistence and history queries | Member 2 |
+| Member 4 | `feature/ascii-charts-reports` | `ReportGenerator.*`, charts, exports, integration checklist | Member 3 |
 
----
+Each branch has **one PR with exactly three task commits**: a usable module foundation, the feature implementation, and verification/cleanup. Review fixes should be amended into the relevant commit before merge so that the final branch still has three commits. The PR description should name the contract functions implemented, the checks run, and any known limitations. A reviewer checks behavior against the shared contract and requests changes in the author's branch. Shared integration fixes should be coordinated with the module owner so that branches do not introduce competing definitions.
 
-### Member 2: Core Calculations & Business Logic Lead
-- **Primary Scope:** Core financial transaction engine, account balance algorithms, and multi-currency mathematical operations.
-- **Assigned Features:**
-  - *Transaction Engine (Deposit, Withdrawal, Peer-to-Peer Transfer)*
-  - *Multi-Account Type Management*
-  - *Foreign Exchange (FX) & Multi-Currency Converter*
-- **Git Branch:** `feature/transaction-engine`
-- **Cyclic Reviewer Role:** Assigned Reviewer for **Member 3**.
+## Member 1: menu, authentication, and integration
 
-#### Exact Function Implementations (Called by Member 1):
-- `AccountSummary getAccountSummary(string accountID)`: Calculates balance totals, accrued interest, and active status for checking, savings, and time deposits.
-- `bool deposit(string accountID, double amount)`: Adds funds to `accountID`, ensuring `amount > 0`.
-- `bool withdraw(string accountID, double amount)`: Checks `(currentBalance - amount) >= minBalanceRequirement`. Rejects overdraws.
-- `bool transfer(string senderID, string receiverID, double amount)`: Deducts from sender and credits receiver atomically; rolls back if receiver ID is invalid or sender balance is insufficient.
-- `bool createAccount(string holderName, string accountType, double initialDeposit)`: Initializes new account objects with interest rates and minimum balance constraints.
-- `double convertCurrency(double amount, string fromCurr, string toCurr)`: Calculates currency equivalents across PHP, USD, EUR, and JPY using exchange rates.
-- `bool updateAccountStatus(string accountID, string newStatus)`: Changes account state between `Active`, `Frozen`, or `Closed`.
+Build the entry point and state-driven guest, client, and admin menus. Guest actions are login, registration, About, and exit. Clients can view their own summary, deposit, withdraw, transfer, view an FX quote and filtered history, see a chart, export a statement or receipt, and log out. Admins can list accounts, change account status, read the audit log, and log out. An invalid choice returns to the current menu; logout clears the account ID and role.
 
-#### Defense & Quality Requirements:
-- **Individual Debugging Scenario:** Debugging floating-point rounding errors or precision loss during compound interest calculations in `getAccountSummary()`. Sets breakpoints in VS Code / GDB to inspect `accruedInterest` and `double` precision variables.
-- **Refactoring & Formatting (`clang-format`) Evidence:** Captures before and after screenshots running `clang-format` on `TransactionEngine.cpp` after replacing hardcoded magic numbers with constant parameters (`constexpr double MIN_CHECKING_BALANCE = 500.0;`).
+Member 1 owns authentication, role checks, and call order. It uses Member 3's validators to collect input; Member 2's operations to change a candidate snapshot; Member 3's save function to persist it; and Member 4's read-only functions for visual output. A client action must use the authenticated account ID rather than trusting an arbitrary ID entered at the prompt. The registration flow must return the newly assigned account ID to the user after a successful save.
 
----
+1. `feat(menu): add entry point and state-driven menu skeleton` — implement guest/client/admin loops and navigation against the agreed headers.
+2. `feat(auth): add login, registration, and role-gated actions` — wire validators, authentication, transactions, status changes, reports, and persistence, including failure paths.
+3. `test(menu): verify navigation and finish integration wiring` — check malformed input, failed login, client/admin access, save failure, and logout; format touched code and record results in the PR.
 
-### Member 3: File Storage, Records & Input Validation Lead
-- **Primary Scope:** Persistent flat-file storage, serialization/parsing, input sanitization, and transaction filtering.
-- **Assigned Features:**
-  - *Persistent File Storage & Serialization*
-  - *Defensive Input Validation & Sanitization Engine*
-  - *Searchable Transaction History & Query Filter*
-- **Git Branch:** `feature/file-storage-validation`
-- **Cyclic Reviewer Role:** Assigned Reviewer for **Member 4**.
+**Review focus:** No stuck menu loop, unauthorized account access, or successful message after a failed save. A rejected action leaves the active snapshot unchanged.
 
-#### Exact Function Implementations (Called by Member 1):
-- `int getValidInt(string prompt, int min, int max)`: Traps non-numeric inputs and range violations using `cin.fail()`, `cin.clear()`, and `cin.ignore()`.
-- `double getValidDouble(string prompt, double minAmount)`: Validates double/float monetary inputs.
-- `string getValidPIN(string prompt)`: Validates 4-digit or 6-digit numeric string formats.
-- `bool validateCredentials(string accountID, string inputPIN)`: Reads `accounts.csv` and checks password hash matches.
-- `bool saveAccountRecord(Account acc)`: Appends a newly registered account to `accounts.csv`.
-- `bool saveAllAccounts()`: Overwrites `accounts.csv` with updated account states and balances.
-- `vector<Account> loadAllAccounts()`: Parses `accounts.csv` into memory during startup or admin views.
-- `void displayFilteredTransactions(string accountID, string startDate, string endDate, string type, double minAmt, double maxAmt)`: Reads `transactions.csv` and outputs matching entries.
-- `void readAuditLogs()`: Parses `audit.log` for administrative reviews.
+## Member 2: accounts, transactions, and FX
 
-#### Defense & Quality Requirements:
-- **Individual Debugging Scenario:** Debugging CSV parsing errors in `loadAllAccounts()` caused by trailing newlines or delimiter mismatches. Sets breakpoints inside the `stringstream` loop to inspect token extraction.
-- **Refactoring & Formatting (`clang-format`) Evidence:** Captures before and after screenshots running `clang-format` on `FileStorage.cpp` and `InputValidator.cpp` after renaming cryptic variables to clean, descriptive naming conventions.
+Implement account creation and summaries, deposits, withdrawals, peer-to-peer transfers, account status changes, and indicative currency conversion. This module receives `BankData` and performs no console or file I/O. Money uses integer minor units; conversion to display text belongs at the menu/report boundary. Generate unique account and transaction IDs from the loaded state. Apply the account's minimum balance and status rules to every outgoing operation. A transfer checks both accounts before changing either and records one ledger entry containing both balances.
 
----
+Keep account type parameters, interest rates, minimum balances, and demo FX rates as named constants or model fields. A summary reports the stored annual rate; it does not silently post interest. The FX function returns a quote and never changes an account balance.
 
-### Member 4: Additional Features, Quality Assurance & Testing Lead
-- **Primary Scope:** Console visual outputs, exportable documentation generators, debugger investigations, static analysis, and group test suite coordination.
-- **Assigned Features:**
-  - *ASCII-Based Financial Data Visualization*
-  - *Printable Account Statement & Receipt Generator*
-- **Git Branch:** `feature/ascii-charts-reports`
-- **Cyclic Reviewer Role:** Assigned Reviewer for **Member 1**.
+1. `feat(accounts): add creation, summaries, and product rules` — implement account IDs, opening deposits, type parameters, and read-only summaries.
+2. `feat(transactions): add balance operations, status changes, and FX` — enforce invariants, append ledger entries, and return informative results.
+3. `test(engine): cover failures and monetary boundaries` — check nonpositive amounts, insufficient funds, minimum balances, invalid recipients, frozen/closed accounts, overflow, transfer atomicity, and rounding; format the module.
 
-#### Exact Function Implementations (Called by Member 1):
-- `void renderASCIIBalanceChart(string accountID)`: Pulls balance history from Member 3's transactions ledger, calculates relative scale factors, and prints horizontal ASCII bar charts directly in the terminal.
-- `bool exportStatement(string accountID)`: Builds a formal account summary statement and saves it as `Statement_<accountID>.txt`.
-- `bool generateReceipt(string transactionID)`: Formats an individual transaction receipt and exports it as `Receipt_<transactionID>.txt`.
+**Review focus:** No partial transfer, duplicate ID, balance drift, or mutation after a rejected operation.
 
-#### Defense & Quality Requirements:
-- **Individual Debugging Scenario:** Debugging character alignment and buffer overflow issues in `renderASCIIBalanceChart()` when balance values exceed maximum bar graph scaling thresholds. Sets breakpoints to inspect `scaleFactor` and `barLength` calculations.
-- **Refactoring & Formatting (`clang-format`) Evidence:** Captures before and after screenshots running `clang-format` on `ReportGenerator.cpp` after organizing stream output formatting and standardizing header borders.
+## Member 3: persistence, validation, and queries
+
+Implement the authoritative snapshot loader/saver, safe prompt helpers, filtered transaction history, and audit-log append/reading. Loading must distinguish a missing file (new installation) from a malformed existing file. Saving writes a complete temporary snapshot, checks it, then replaces the authoritative file. Parsing must reject invalid enum values, duplicate IDs, and truncated records instead of inventing default values. The PIN digest is an opaque string to storage; Member 1 owns credential verification.
+
+Validators clear failed stream state, reject values outside the requested range, and keep a PIN as a string so leading zeroes survive. The history query filters the in-memory ledger by authenticated account, optional inclusive date range, type, and amount. Audit-log reading tolerates a missing or empty log.
+
+1. `feat(storage): add snapshot parser and serializer` — implement the agreed records, startup load, temporary-file save, and useful errors.
+2. `feat(input): add prompts, history filtering, and audit records` — implement range-safe numeric/PIN input, read-only ledger queries, and audit append/reading.
+3. `test(storage): verify round trips and malformed input` — check restart persistence, empty/new files, corrupt records, failed writes, bad input, and filter boundaries; format the module.
+
+**Review focus:** A failed write preserves the prior readable snapshot, and bad input cannot leave `std::cin` stuck in a failed state.
+
+## Member 4: charts, reports, and QA
+
+Implement read-only ASCII balance charts, account statements, and transaction receipts. Derive chart points from the account's chronological ledger entries, label values and dates, and cap bar width even for large balances. Statements show the account and period, opening/closing balances, and matching transactions. Receipts look up a transaction reference and display its amount and relevant account IDs. Return clear errors for missing accounts, missing transactions, or unwritable output paths.
+
+Member 4 also coordinates the cross-module smoke-test checklist. Defects in another member's module should be reported to that owner and fixed in the appropriate PR or reviewed follow-up.
+
+1. `feat(charts): add bounded ASCII balance chart` — implement chronological points and safe scaling for empty or large histories.
+2. `feat(reports): add statement and receipt exports` — implement text formatting, lookup, output paths, and write errors.
+3. `test(reports): verify exports and document integration checks` — check chart bounds, empty history, statement totals, receipt lookup, and output failure; format the module.
+
+**Review focus:** Exports never mutate the snapshot; reported values match the ledger; chart output remains bounded.
+
+## Integration and acceptance
+
+After review and merge, build with C++17 and complete this workflow: register, restart, log in, deposit, withdraw, transfer, filter history, draw a chart, export a statement and receipt, change status as admin, and confirm rejected actions leave the saved snapshot intact. The cyclic review chain is Member 1 reviews Member 2, Member 2 reviews Member 3, Member 3 reviews Member 4, and Member 4 reviews Member 1.
+
+The repository currently contains documentation only. Source filenames and tests above describe planned ownership and acceptance, not existing implementation.
