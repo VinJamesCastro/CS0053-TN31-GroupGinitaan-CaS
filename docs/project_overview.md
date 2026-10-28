@@ -69,17 +69,19 @@ g++ -std=c++17 -Wall main.cpp MenuController.cpp TransactionEngine.cpp FileStora
 ## 5. Sample CLI Output
 
 ```text
-===================================================
-          CENTS AND SENSIBILITY (CaS)             
-    "Smart banking that makes good sense."        
-===================================================
- [1] Login
- [2] Register Account
- [3] About CaS
- [4] Exit
----------------------------------------------------
-Enter choice (1-4): 1
-Account ID: ACC-1001
-PIN: ****
-Login successful! Welcome, Client.
++--------------------------------------------------+
+|           CENTS AND SENSIBILITY (CaS)            |
+|       Smart banking that makes good sense.       |
++--------------------------------------------------+
+|  1. Login                                        |
+|  2. Register Account                             |
+|  3. About CaS                                    |
+|  4. Exit                                         |
++--------------------------------------------------+
+  Select an option [1-4]: 1
+
+  Account ID: ACC-000001
+  PIN: ****
+
+  Login successful. Welcome, Client!
 ```
