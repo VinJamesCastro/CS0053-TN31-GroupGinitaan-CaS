@@ -4,7 +4,9 @@ Member 4 implements `ReportGenerator.cpp`. The agreed shared types and report fu
 
 ## Local report verification
 
-- Compile and run `tests/report_generator_test.cpp` with C++17: `g++ -std=c++17 -Wall -Wextra -pedantic tests/report_generator_test.cpp -o report_generator_test` followed by `./report_generator_test` (or `report_generator_test.exe` on Windows).
+Record these as written test cases with the input, expected result, observed result, and pass/fail status. No test-code file is required.
+
+- Compile `ReportGenerator.cpp` with C++17 and record whether the compiler reports errors or warnings.
 - Check chronological chart rows, dates, bounded bars, zero or empty history, and very large balances.
 - Check statement account details, period, opening and closing balances, transaction amounts, and credit/debit totals against the in-memory ledger.
 - Check receipt reference, UTC date, amount, participant IDs, and resulting balances.
