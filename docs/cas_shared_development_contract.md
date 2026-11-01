@@ -172,7 +172,7 @@ The four members may branch from the agreed Markdown contract and begin their as
 
 | Work | Can start independently? | Required handoff |
 | --- | --- | --- |
-| Each member's module design, algorithms, and test cases | Yes | Use the fields and signatures documented here. |
+| Each member's module design and algorithms | Yes | Use the fields and signatures documented here. |
 | Compiling and integrating the complete application | After the members' implementations exist | Check that each implementation follows the agreed C++ types and signatures above; resolve any mismatches together. |
 | Merging each feature PR | After its assigned cyclic reviewer approves it | Follow the review chain in the project overview. |
 | End-to-end acceptance | After all four modules are integrated | Run the workflow listed in the architecture and member roles document. |
