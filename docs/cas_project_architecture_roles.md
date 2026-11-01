@@ -1,6 +1,6 @@
 # Cents and Sensibility (CaS): architecture and member roles
 
-CaS is a C++17 terminal banking application. This document assigns implementation ownership, explains how the modules cooperate, and gives each member a three-commit PR plan. The [shared development contract](cas_shared_development_contract.md) records the agreed type names, function interfaces, data format, and rules that let the four branches proceed in parallel.
+CaS is a C++17 terminal banking application. This document assigns implementation ownership, explains how the modules cooperate, and gives each member a plan with at least three commits. The [shared development contract](cas_shared_development_contract.md) records the agreed type names, function interfaces, data format, and rules that let the four branches proceed in parallel.
 
 ## Architecture and parallel workflow
 
@@ -15,7 +15,7 @@ CLI and session (Member 1)
 
 Member 3 loads `BankData` at startup. Member 2 applies a requested financial change to a **candidate copy** of that snapshot. Member 1 asks Member 3 to save the candidate and adopts it as the active state only if saving succeeds. Member 4 reads the active snapshot to produce charts and reports. This call order keeps menu navigation, business rules, file I/O, and output formatting in their assigned modules.
 
-The project has no HTTP server or web endpoints. The Markdown contract records the names, fields, and function interfaces agreed by the developers. The members may branch from it without a separate shared-types header or an early header handoff. Each member owns a different set of implementation files and can work from the documented agreement without waiting for the other features. Changes to a shared signature or persisted field need a reviewed contract update communicated to the affected owners.
+The project has no HTTP server or web endpoints. The Markdown contract records the C++ types, fields, and function signatures agreed by the developers. Each member may branch from it and begin their assigned `.cpp` work immediately; the plan requires no header handoff. Complete application integration and PR review still depend on the relevant work being finished. The [parallel-work boundaries](cas_shared_development_contract.md#parallel-work-boundaries) list those later steps. Changes to a shared signature or persisted field need a reviewed contract update communicated to the affected owners.
 
 | Author | Feature branch | Implementation ownership | PR reviewer |
 | --- | --- | --- | --- |
@@ -24,7 +24,7 @@ The project has no HTTP server or web endpoints. The Markdown contract records t
 | Member 3 | `feature/file-storage-validation` | `FileStorage.*`, `InputValidator.*`, persistence and history queries | Member 2 |
 | Member 4 | `feature/ascii-charts-reports` | `ReportGenerator.*`, charts, exports, integration checklist | Member 3 |
 
-Each branch has **one PR with exactly three task commits**: a usable module foundation, the feature implementation, and verification/cleanup. Review fixes should be amended into the relevant commit before merge so that the final branch still has three commits. The PR description should name the contract functions implemented, the checks run, and any known limitations. A reviewer checks behavior against the shared contract and requests changes in the author's branch. Shared integration fixes should be coordinated with the module owner so that branches do not introduce competing definitions.
+Each member shall split their entire assigned work into **at least three meaningful commits** in one feature PR. The three milestones below for each member cover a usable module foundation, feature implementation, and verification/cleanup; additional commits are allowed for distinct work or review fixes. The PR description should name the contract functions implemented, the checks run, and any known limitations. A reviewer checks behavior against the shared contract and requests changes in the author's branch. Shared integration fixes should be coordinated with the module owner so that branches do not introduce competing definitions.
 
 ## Member 1: menu, authentication, and integration
 
@@ -32,7 +32,7 @@ Build the entry point and state-driven guest, client, and admin menus. Guest act
 
 Member 1 owns authentication, role checks, and call order. It uses Member 3's validators to collect input; Member 2's operations to change a candidate snapshot; Member 3's save function to persist it; and Member 4's read-only functions for visual output. A client action must use the authenticated account ID rather than trusting an arbitrary ID entered at the prompt. The registration flow must return the newly assigned account ID to the user after a successful save.
 
-1. `feat(menu): add entry point and state-driven menu skeleton` — implement guest/client/admin loops and navigation against the agreed headers.
+1. `feat(menu): add entry point and state-driven menu skeleton` — implement guest/client/admin loops and navigation against the agreed function signatures.
 2. `feat(auth): add login, registration, and role-gated actions` — wire validators, authentication, transactions, status changes, reports, and persistence, including failure paths.
 3. `test(menu): verify navigation and finish integration wiring` — check malformed input, failed login, client/admin access, save failure, and logout; format touched code and record results in the PR.
 

@@ -4,7 +4,7 @@ Read this with [architecture and member roles](cas_project_architecture_roles.md
 
 ## Shared model
 
-The declarations below document the fields and names agreed by the developers. Each member uses this agreement while implementing their assigned module; this document does not assign a separate shared-types file or require one member to publish a header before others begin. Private helpers can remain inside their owner modules. Use `std::int64_t` minor units for money so balance changes avoid floating-point drift. For PHP, USD, and EUR, 100 minor units equal one currency unit; JPY has zero decimal places.
+The C++ block below is the developers' agreement on shared type names and fields. Each member follows it when writing their assigned `.cpp` files. This document does not prescribe a shared source or header file, and no member must publish one before others begin. Private helpers can remain inside their owner modules. Use `std::int64_t` minor units for money so balance changes avoid floating-point drift. For PHP, USD, and EUR, 100 minor units equal one currency unit; JPY has zero decimal places.
 
 ```cpp
 namespace cas {
@@ -92,7 +92,7 @@ An admin may be stored as an `Account` with `role == Admin`, but is not a deposi
 Use these names in `namespace cas`. A rejected state-changing operation returns `ok == false`, a useful message, an empty reference ID, and **does not modify** its input snapshot. A successful balance change appends its ledger row before returning. None of Member 2's functions perform file or console I/O.
 
 ```cpp
-// Member 2 — TransactionEngine.hpp
+// Member 2 — TransactionEngine.cpp
 OperationResult createAccount(BankData& data, const std::string& holderName,
                               AccountType type, const std::string& pinDigest,
                               Money initialDepositCents);
@@ -105,7 +105,7 @@ OperationResult updateAccountStatus(BankData& data, const std::string& accountId
                                     AccountStatus nextStatus);
 FxQuote convertCurrency(Money inputMinorUnits, Currency from, Currency to);
 
-// Member 3 — FileStorage.hpp and InputValidator.hpp
+// Member 3 — FileStorage.cpp and InputValidator.cpp
 LoadResult loadSnapshot(const std::filesystem::path& path);
 SaveResult saveSnapshot(const std::filesystem::path& path, const BankData& data);
 std::vector<Transaction> filterTransactions(const BankData& data,
@@ -116,7 +116,7 @@ int getValidInt(const std::string& prompt, int minInclusive, int maxInclusive);
 Money getValidMoney(const std::string& prompt, Money minInclusive);
 std::string getValidPin(const std::string& prompt);
 
-// Member 4 — ReportGenerator.hpp
+// Member 4 — ReportGenerator.cpp
 ReportResult renderAsciiBalanceChart(const BankData& data, const std::string& accountId,
                                      std::ostream& output);
 ReportResult exportStatement(const BankData& data, const std::string& accountId,
@@ -124,7 +124,7 @@ ReportResult exportStatement(const BankData& data, const std::string& accountId,
 ReportResult generateReceipt(const BankData& data, const std::string& transactionId,
                              const std::filesystem::path& outputPath);
 
-// Member 1 — Authentication.hpp
+// Member 1 — authentication implementation
 std::string digestPin(const std::string& pin);
 LoginResult login(const BankData& data, const std::string& accountId,
                   const std::string& pin);
@@ -166,4 +166,15 @@ currentBankData = move(candidate); show success
 
 ## Ready to branch
 
-The four members may branch from the agreed Markdown contract. There is no separate shared-types header or baseline code commit prerequisite. Each member uses the agreed names and fields when implementing their assigned module. If the team changes a shared model, signature, file rule, or product constant, review the contract update and notify every affected branch owner before code depends on it.
+The four members may branch from the agreed Markdown contract and begin their assigned `.cpp` work at the same time. The C++ blocks above are the agreed types and function signatures for developers to follow. No header handoff is required by this plan. If the team changes a shared model, signature, file rule, or product constant, review the contract update and notify every affected branch owner before code depends on it.
+
+## Parallel-work boundaries
+
+| Work | Can start independently? | Required handoff |
+| --- | --- | --- |
+| Each member's module design, algorithms, and test cases | Yes | Use the fields and signatures documented here. |
+| Compiling and integrating the complete application | After the members' implementations exist | Check that each implementation follows the agreed C++ types and signatures above; resolve any mismatches together. |
+| Merging each feature PR | After its assigned cyclic reviewer approves it | Follow the review chain in the project overview. |
+| End-to-end acceptance | After all four modules are integrated | Run the workflow listed in the architecture and member roles document. |
+
+These handoffs limit when work can be compiled, reviewed, and integrated. They do not prevent members from beginning their assigned work on separate branches at the same time.
