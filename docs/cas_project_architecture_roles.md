@@ -24,7 +24,7 @@ The project has no HTTP server or web endpoints. The Markdown contract records t
 | Member 3 | `feature/file-storage-validation` | `FileStorage.*`, `InputValidator.*`, persistence and history queries | Member 2 |
 | Member 4 | `feature/ascii-charts-reports` | `ReportGenerator.*`, charts, exports, integration checklist | Member 3 |
 
-Each member shall split their entire assigned work into **at least three meaningful commits** in one feature PR. The three milestones below for each member cover a usable module foundation, feature implementation, and verification/cleanup; additional commits are allowed for distinct work or review fixes. The PR description should name the contract functions implemented, the checks run, and any known limitations. A reviewer checks behavior against the shared contract and requests changes in the author's branch. Shared integration fixes should be coordinated with the module owner so that branches do not introduce competing definitions.
+Each member shall split their entire assigned work into **at least three meaningful commits** in one feature PR. The three milestones below for each member cover a usable module foundation, feature implementation, and verification/cleanup; additional commits are allowed for distinct work or review fixes. Verification is documented as written test cases and results, not submitted as test-code files. For each case, record the input or steps, expected result, observed result, and pass/fail status. The PR description should name the contract functions implemented, the checks run, and any known limitations. A reviewer checks behavior against the shared contract and requests changes in the author's branch. Shared integration fixes should be coordinated with the module owner so that branches do not introduce competing definitions.
 
 ## Member 1: menu, authentication, and integration
 
@@ -34,7 +34,7 @@ Member 1 owns authentication, role checks, and call order. It uses Member 3's va
 
 1. `feat(menu): add entry point and state-driven menu skeleton` — implement guest/client/admin loops and navigation against the agreed function signatures.
 2. `feat(auth): add login, registration, and role-gated actions` — wire validators, authentication, transactions, status changes, reports, and persistence, including failure paths.
-3. `test(menu): verify navigation and finish integration wiring` — check malformed input, failed login, client/admin access, save failure, and logout; format touched code and record results in the PR.
+3. `docs(menu): record navigation checks and finish integration wiring` — check malformed input, failed login, client/admin access, save failure, and logout; format touched code and record written results in the PR.
 
 **Review focus:** No stuck menu loop, unauthorized account access, or successful message after a failed save. A rejected action leaves the active snapshot unchanged.
 
@@ -46,7 +46,7 @@ Keep account type parameters, interest rates, minimum balances, and demo FX rate
 
 1. `feat(accounts): add creation, summaries, and product rules` — implement account IDs, opening deposits, type parameters, and read-only summaries.
 2. `feat(transactions): add balance operations, status changes, and FX` — enforce invariants, append ledger entries, and return informative results.
-3. `test(engine): cover failures and monetary boundaries` — check nonpositive amounts, insufficient funds, minimum balances, invalid recipients, frozen/closed accounts, overflow, transfer atomicity, and rounding; format the module.
+3. `docs(engine): record failure and monetary boundary checks` — check nonpositive amounts, insufficient funds, minimum balances, invalid recipients, frozen/closed accounts, overflow, transfer atomicity, and rounding; format the module and record written results.
 
 **Review focus:** No partial transfer, duplicate ID, balance drift, or mutation after a rejected operation.
 
@@ -58,7 +58,7 @@ Validators clear failed stream state, reject values outside the requested range,
 
 1. `feat(storage): add snapshot parser and serializer` — implement the agreed records, startup load, temporary-file save, and useful errors.
 2. `feat(input): add prompts, history filtering, and audit records` — implement range-safe numeric/PIN input, read-only ledger queries, and audit append/reading.
-3. `test(storage): verify round trips and malformed input` — check restart persistence, empty/new files, corrupt records, failed writes, bad input, and filter boundaries; format the module.
+3. `docs(storage): record round-trip and malformed-input checks` — check restart persistence, empty/new files, corrupt records, failed writes, bad input, and filter boundaries; format the module and record written results.
 
 **Review focus:** A failed write preserves the prior readable snapshot, and bad input cannot leave `std::cin` stuck in a failed state.
 
@@ -70,7 +70,7 @@ Member 4 also coordinates the cross-module smoke-test checklist. Defects in anot
 
 1. `feat(charts): add bounded ASCII balance chart` — implement chronological points and safe scaling for empty or large histories.
 2. `feat(reports): add statement and receipt exports` — implement text formatting, lookup, output paths, and write errors.
-3. `test(reports): verify exports and document integration checks` — check chart bounds, empty history, statement totals, receipt lookup, and output failure; format the module.
+3. `docs(reports): record export and integration checks` — check chart bounds, empty history, statement totals, receipt lookup, and output failure; format the module and record written results.
 
 **Review focus:** Exports never mutate the snapshot; reported values match the ledger; chart output remains bounded.
 
