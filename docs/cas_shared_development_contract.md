@@ -1,10 +1,10 @@
 # CaS shared development contract
 
-Read this with [architecture and member roles](cas_project_architecture_roles.md). CaS is a C++17 command-line program: these are C++ function interfaces, **not HTTP endpoints**. Freeze the common model and public signatures before creating the four feature branches. The declarations below specify headers to implement; they do not claim the source files already exist.
+Read this with [architecture and member roles](cas_project_architecture_roles.md). CaS is a C++17 command-line program: these are C++ function interfaces, **not HTTP endpoints**. This Markdown document is the agreement on names, fields, and public signatures. The declarations below specify code to implement; they do not claim the source files already exist.
 
 ## Shared model
 
-Place the common declarations in one `BankTypes.hpp` on the baseline branch. All module headers include it; feature branches must not redefine the types. Private helpers can remain inside their owner modules. Use `std::int64_t` minor units for money so balance changes avoid floating-point drift. For PHP, USD, and EUR, 100 minor units equal one currency unit; JPY has zero decimal places.
+The declarations below document the fields and names agreed by the developers. Each member uses this agreement while implementing their assigned module; this document does not assign a separate shared-types file or require one member to publish a header before others begin. Private helpers can remain inside their owner modules. Use `std::int64_t` minor units for money so balance changes avoid floating-point drift. For PHP, USD, and EUR, 100 minor units equal one currency unit; JPY has zero decimal places.
 
 ```cpp
 namespace cas {
@@ -83,7 +83,7 @@ struct LoginResult {
 }
 ```
 
-Add the required standard-library includes in the actual header. Default-initialize enum and numeric fields in the implementation header so a failed result never exposes indeterminate data. `AccountSummary::found == false` means the ID does not exist. Keep account and transaction IDs stable across restarts by finding the highest existing numeric suffix before allocating the next one; reject overflow or duplicate IDs.
+Add the required standard-library includes in the implementation. Default-initialize enum and numeric fields so a failed result never exposes indeterminate data. `AccountSummary::found == false` means the ID does not exist. Keep account and transaction IDs stable across restarts by finding the highest existing numeric suffix before allocating the next one; reject overflow or duplicate IDs.
 
 An admin may be stored as an `Account` with `role == Admin`, but is not a deposit/withdrawal target. Member 1 documents and implements a first-run admin bootstrap path in its PR; it must not ship an undisclosed hardcoded credential.
 
@@ -166,4 +166,4 @@ currentBankData = move(candidate); show success
 
 ## Ready to branch
 
-Commit this contract and a matching `BankTypes.hpp` to `main`, then have all four members branch from that revision. That small baseline is the only sequential handoff. If the team changes a shared model, signature, file rule, or product constant, review the contract update and notify every affected branch owner before code depends on it.
+The four members may branch from the agreed Markdown contract. There is no separate shared-types header or baseline code commit prerequisite. Each member uses the agreed names and fields when implementing their assigned module. If the team changes a shared model, signature, file rule, or product constant, review the contract update and notify every affected branch owner before code depends on it.

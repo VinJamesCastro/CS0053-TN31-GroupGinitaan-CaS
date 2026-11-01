@@ -1,6 +1,6 @@
 # Cents and Sensibility (CaS): architecture and member roles
 
-CaS is a C++17 terminal banking application. This document assigns implementation ownership, explains how the modules cooperate, and gives each member a three-commit PR plan. The [shared development contract](cas_shared_development_contract.md) fixes the types, function interfaces, data format, and rules that let the four branches proceed in parallel.
+CaS is a C++17 terminal banking application. This document assigns implementation ownership, explains how the modules cooperate, and gives each member a three-commit PR plan. The [shared development contract](cas_shared_development_contract.md) records the agreed type names, function interfaces, data format, and rules that let the four branches proceed in parallel.
 
 ## Architecture and parallel workflow
 
@@ -15,7 +15,7 @@ CLI and session (Member 1)
 
 Member 3 loads `BankData` at startup. Member 2 applies a requested financial change to a **candidate copy** of that snapshot. Member 1 asks Member 3 to save the candidate and adopts it as the active state only if saving succeeds. Member 4 reads the active snapshot to produce charts and reports. This call order keeps menu navigation, business rules, file I/O, and output formatting in their assigned modules.
 
-The project has no HTTP server or web endpoints. Its integration points are C++ headers and functions in the shared contract. Before feature work starts, commit that contract and its common `BankTypes.hpp` declarations to `main`; every member branches from that same revision. Each member owns a different set of implementation files and can work without waiting for the other features. Changes to a shared signature or persisted field need a reviewed contract update communicated to the affected owners.
+The project has no HTTP server or web endpoints. The Markdown contract records the names, fields, and function interfaces agreed by the developers. The members may branch from it without a separate shared-types header or an early header handoff. Each member owns a different set of implementation files and can work from the documented agreement without waiting for the other features. Changes to a shared signature or persisted field need a reviewed contract update communicated to the affected owners.
 
 | Author | Feature branch | Implementation ownership | PR reviewer |
 | --- | --- | --- | --- |
