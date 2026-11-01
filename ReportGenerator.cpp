@@ -158,7 +158,12 @@ ReportResult exportStatement(const BankData& data, const std::string& accountId,
         const Transaction& first = *rows.front();
         const Money after = balanceAfter(first, accountId);
         const bool incoming = first.toAccountId == accountId;
+        if (first.amountCents < 0 ||
+            (!incoming && after > std::numeric_limits<Money>::max() - first.amountCents))
+            return {false, "Invalid transaction amount or balance"};
         const Money opening = incoming ? after - first.amountCents : after + first.amountCents;
+        Money credits = 0;
+        Money debits = 0;
         report << "Period: " << first.occurredAt.substr(0, 10) << " to "
                << rows.back()->occurredAt.substr(0, 10) << '\n'
                << "Opening balance: " << moneyText(opening) << '\n'
@@ -166,11 +171,17 @@ ReportResult exportStatement(const BankData& data, const std::string& accountId,
                << "Transactions:\n";
         for (const auto* row : rows) {
             const bool credit = row->toAccountId == accountId;
+            if (row->amountCents < 0 || row->amountCents >
+                std::numeric_limits<Money>::max() - (credit ? credits : debits))
+                return {false, "Transaction totals exceed the money range"};
+            (credit ? credits : debits) += row->amountCents;
             report << row->occurredAt << " | " << row->transactionId << " | "
                    << typeText(row->type) << " | " << (credit ? '+' : '-')
                    << moneyText(row->amountCents) << " | Balance "
                    << moneyText(balanceAfter(*row, accountId)) << '\n';
         }
+        report << "\nTotal credits: " << moneyText(credits) << '\n'
+               << "Total debits: " << moneyText(debits) << '\n';
     }
     return writeFile(outputPath, report.str());
 }
