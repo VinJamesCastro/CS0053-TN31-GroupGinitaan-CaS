@@ -114,6 +114,16 @@ namespace cas
         }
     }
 
+    void showGuestMenu()
+    {
+        cout << "\n=== Cents and Sensibility ===\n"
+            << "1. Login\n"
+            << "2. Register account\n"
+            << "3. About\n"
+            << "4. Exit\n"
+            << "Choose an option: ";
+    }
+
     void runMenu()
     {
         Session session;
@@ -137,12 +147,7 @@ namespace cas
                 continue;
             }
 
-            cout << "\n=== Cents and Sensibility ===\n"
-                 << "1. Login\n"
-                 << "2. Register account\n"
-                 << "3. About\n"
-                 << "4. Exit\n"
-                 << "Choose an option: ";
+            showGuestMenu();
 
             if (!getline(cin, choice))
             {
