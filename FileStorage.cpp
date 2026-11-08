@@ -7,6 +7,8 @@
 #include <system_error>
 #include <unordered_set>
 #include <utility>
+#include <algorithm>
+#include <stdexcept>
 
 #include <iomanip>
 
@@ -19,6 +21,85 @@
 
 namespace cas {
 namespace {
+
+    bool isValidDate(const std::string& date) {
+    if (date.size() != 10 || date[4] != '-' || date[7] != '-') {
+        return false;
+    }
+
+    for (std::size_t index = 0; index < date.size(); ++index) {
+        if (index == 4 || index == 7) {
+            continue;
+        }
+
+        if (date[index] < '0' || date[index] > '9') {
+            return false;
+        }
+    }
+
+    const int year = std::stoi(date.substr(0, 4));
+    const int month = std::stoi(date.substr(5, 2));
+    const int day = std::stoi(date.substr(8, 2));
+
+    if (year < 1 || month < 1 || month > 12) {
+        return false;
+    }
+
+    constexpr int daysPerMonth[] = {
+        31, 28, 31, 30, 31, 30,
+        31, 31, 30, 31, 30, 31
+    };
+
+    int maximumDay = daysPerMonth[month - 1];
+
+    const bool leapYear =
+        year % 400 == 0 || (year % 4 == 0 && year % 100 != 0);
+
+    if (month == 2 && leapYear) {
+        maximumDay = 29;
+    }
+
+    return day >= 1 && day <= maximumDay;
+}
+
+bool isValidUtcTimestamp(const std::string& timestamp) {
+    if (timestamp.size() != 20 ||
+        timestamp[10] != 'T' ||
+        timestamp[13] != ':' ||
+        timestamp[16] != ':' ||
+        timestamp[19] != 'Z' ||
+        !isValidDate(timestamp.substr(0, 10))) {
+        return false;
+    }
+
+    constexpr std::size_t digitPositions[] = {
+        11, 12, 14, 15, 17, 18
+    };
+
+    for (std::size_t position : digitPositions) {
+        if (timestamp[position] < '0' ||
+            timestamp[position] > '9') {
+            return false;
+        }
+    }
+
+    const int hour = std::stoi(timestamp.substr(11, 2));
+    const int minute = std::stoi(timestamp.substr(14, 2));
+    const int second = std::stoi(timestamp.substr(17, 2));
+
+    return hour <= 23 && minute <= 59 && second <= 59;
+}
+
+bool isValidAuditEntry(const AuditEntry& entry) {
+    const int previous = static_cast<int>(entry.previousStatus);
+    const int next = static_cast<int>(entry.nextStatus);
+
+    return isValidUtcTimestamp(entry.occurredAt) &&
+           !entry.adminAccountId.empty() &&
+           !entry.targetAccountId.empty() &&
+           previous >= 0 && previous <= 2 &&
+           next >= 0 && next <= 2;
+}
 
 std::string encodeText(const std::string& value) {
     if (value.empty()) {
@@ -436,6 +517,259 @@ SaveResult saveSnapshot(const std::filesystem::path& path,
     }
 
     return {true, "Snapshot saved successfully."};
+}
+
+std::vector<Transaction> filterTransactions(
+    const BankData& data,
+    const TransactionFilter& filter) {
+    if (filter.accountId.empty()) {
+        throw std::invalid_argument(
+            "A history filter requires an account ID.");
+    }
+
+    if ((filter.startDate && !isValidDate(*filter.startDate)) ||
+        (filter.endDate && !isValidDate(*filter.endDate))) {
+        throw std::invalid_argument(
+            "History dates must be valid YYYY-MM-DD dates.");
+    }
+
+    if (filter.startDate && filter.endDate &&
+        *filter.startDate > *filter.endDate) {
+        throw std::invalid_argument(
+            "History start date must not follow end date.");
+    }
+
+    if ((filter.minAmountCents && *filter.minAmountCents < 0) ||
+        (filter.maxAmountCents && *filter.maxAmountCents < 0)) {
+        throw std::invalid_argument(
+            "History amount limits must be non-negative.");
+    }
+
+    if (filter.minAmountCents && filter.maxAmountCents &&
+        *filter.minAmountCents > *filter.maxAmountCents) {
+        throw std::invalid_argument(
+            "Minimum amount must not exceed maximum amount.");
+    }
+
+    if (filter.type) {
+        const int type = static_cast<int>(*filter.type);
+
+        if (type < 0 || type > 3) {
+            throw std::invalid_argument(
+                "Invalid history transaction type.");
+        }
+    }
+
+    std::vector<Transaction> matches;
+
+    for (const Transaction& transaction : data.transactions) {
+        const bool belongsToAccount =
+            transaction.fromAccountId == filter.accountId ||
+            transaction.toAccountId == filter.accountId;
+
+        if (!belongsToAccount) {
+            continue;
+        }
+
+        const std::string date = transaction.occurredAt.substr(0, 10);
+
+        if (!isValidDate(date)) {
+            throw std::runtime_error(
+                "Transaction has an invalid date: " +
+                transaction.transactionId);
+        }
+
+        if (filter.startDate && date < *filter.startDate) {
+            continue;
+        }
+
+        if (filter.endDate && date > *filter.endDate) {
+            continue;
+        }
+
+        if (filter.type && transaction.type != *filter.type) {
+            continue;
+        }
+
+        if (filter.minAmountCents &&
+            transaction.amountCents < *filter.minAmountCents) {
+            continue;
+        }
+
+        if (filter.maxAmountCents &&
+            transaction.amountCents > *filter.maxAmountCents) {
+            continue;
+        }
+
+        matches.push_back(transaction);
+    }
+
+    std::stable_sort(
+        matches.begin(),
+        matches.end(),
+        [](const Transaction& left, const Transaction& right) {
+            return left.occurredAt < right.occurredAt;
+        });
+
+    return matches;
+}
+
+std::vector<AuditEntry> readAuditLogs(
+    const std::filesystem::path& path) {
+    std::error_code error;
+    const bool exists = std::filesystem::exists(path, error);
+
+    if (error) {
+        throw std::runtime_error(
+            "Cannot inspect audit log: " + error.message());
+    }
+
+    if (!exists) {
+        return {};
+    }
+
+    std::ifstream input(path, std::ios::binary);
+
+    if (!input) {
+        throw std::runtime_error("Cannot open existing audit log.");
+    }
+
+    std::vector<AuditEntry> entries;
+    std::string line;
+    std::size_t lineNumber = 0;
+
+    while (std::getline(input, line)) {
+        ++lineNumber;
+
+        std::istringstream record(line);
+        std::string marker;
+        int version = 0;
+        AuditEntry entry{};
+
+        const bool valid =
+            static_cast<bool>(record >> marker) &&
+            marker == "AUDIT" &&
+            readInteger(record, version) &&
+            version == 1 &&
+            readText(record, entry.occurredAt) &&
+            readText(record, entry.adminAccountId) &&
+            readText(record, entry.targetAccountId) &&
+            readEnum(record, 2, entry.previousStatus) &&
+            readEnum(record, 2, entry.nextStatus) &&
+            hasNoExtraFields(record) &&
+            isValidAuditEntry(entry);
+
+        if (!valid) {
+            throw std::runtime_error(
+                "Malformed audit record at line " +
+                std::to_string(lineNumber) + ".");
+        }
+
+        entries.push_back(std::move(entry));
+    }
+
+    if (input.bad() || (!input.eof() && input.fail())) {
+        throw std::runtime_error("Reading audit log failed.");
+    }
+
+    return entries;
+}
+
+SaveResult appendAuditLog(const std::filesystem::path& path,
+                          const AuditEntry& entry) {
+    if (path.empty() || path.filename().empty()) {
+        return {false, "An audit-log filename is required."};
+    }
+
+    if (!isValidAuditEntry(entry)) {
+        return {false, "Audit entry contains invalid fields."};
+    }
+
+    const std::filesystem::path parent = path.parent_path();
+    std::error_code error;
+
+    if (!parent.empty()) {
+        std::filesystem::create_directories(parent, error);
+
+        if (error) {
+            return {false,
+                    "Cannot create audit directory: " + error.message()};
+        }
+    }
+
+    // Refuse to extend a malformed existing log.
+    try {
+        (void)readAuditLogs(path);
+    } catch (const std::exception& exception) {
+        return {false, exception.what()};
+    }
+
+    bool needsNewline = false;
+    const bool exists = std::filesystem::exists(path, error);
+
+    if (error) {
+        return {false, "Cannot inspect audit log: " + error.message()};
+    }
+
+    if (exists) {
+        const auto size = std::filesystem::file_size(path, error);
+
+        if (error) {
+            return {false,
+                    "Cannot inspect audit-log size: " + error.message()};
+        }
+
+        if (size > 0) {
+            std::ifstream previous(path, std::ios::binary);
+
+            if (!previous) {
+                return {false, "Cannot inspect audit-log ending."};
+            }
+
+            previous.seekg(-1, std::ios::end);
+
+            char lastCharacter = '\0';
+            if (!previous.get(lastCharacter)) {
+                return {false, "Cannot read audit-log ending."};
+            }
+
+            needsNewline = lastCharacter != '\n';
+        }
+    }
+
+    std::ostringstream record;
+
+    if (needsNewline) {
+        record << '\n';
+    }
+
+    record << "AUDIT 1 "
+           << encodeText(entry.occurredAt) << ' '
+           << encodeText(entry.adminAccountId) << ' '
+           << encodeText(entry.targetAccountId) << ' '
+           << static_cast<int>(entry.previousStatus) << ' '
+           << static_cast<int>(entry.nextStatus) << '\n';
+
+    std::ofstream output(path, std::ios::binary | std::ios::app);
+
+    if (!output) {
+        return {false, "Cannot open audit log for appending."};
+    }
+
+    output << record.str();
+    output.flush();
+
+    if (!output) {
+        return {false, "Writing the audit entry failed."};
+    }
+
+    output.close();
+
+    if (output.fail()) {
+        return {false, "Closing the audit log failed."};
+    }
+
+    return {true, "Audit entry appended successfully."};
 }
 
 }
