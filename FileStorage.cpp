@@ -110,9 +110,10 @@ std::string encodeText(const std::string& value) {
     std::string encoded;
 
     for (unsigned char character : value) {
-        encoded.push_back(digits[character >> 4]);
-        encoded.push_back(digits[character & 0x0F]);
-    }
+    const unsigned int byte = character;
+    encoded.push_back(digits[byte >> 4U]);
+    encoded.push_back(digits[byte & 0x0FU]);
+}
 
     return encoded;
 }
@@ -287,6 +288,8 @@ bool parseAccount(std::istream& input, Account& account) {
            hasNoExtraFields(input);
 }
 
+bool isValidUtcTimestamp(const std::string& timestamp);
+
 bool parseTransaction(std::istream& input, Transaction& transaction) {
     return readText(input, transaction.transactionId) &&
            readText(input, transaction.occurredAt) &&
@@ -296,7 +299,8 @@ bool parseTransaction(std::istream& input, Transaction& transaction) {
            readInteger(input, transaction.amountCents) &&
            readInteger(input, transaction.fromBalanceAfterCents) &&
            readInteger(input, transaction.toBalanceAfterCents) &&
-           hasNoExtraFields(input);
+           hasNoExtraFields(input) &&
+           isValidUtcTimestamp(transaction.occurredAt);
 }
 
 LoadResult loadError(std::size_t lineNumber, const std::string& reason) {
