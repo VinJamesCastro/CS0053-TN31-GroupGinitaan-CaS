@@ -32,11 +32,15 @@ OperationResult transfer(
     const std::string& receiverId,
     Money amountCents);
 
+// Caller must authorize the admin. Changes status only; caller saves and audits.
+// Same-status requests and every transition from Closed return a failed result.
 OperationResult updateAccountStatus(
     BankData& data,
     const std::string& accountId,
     AccountStatus nextStatus);
 
+// Fixed demo-rate quote, with nonnegative input in source minor units.
+// Rounds once to destination minor units, halves up; rejects invalid/overflow input.
 FxQuote convertCurrency(
     Money inputMinorUnits,
     Currency from,
