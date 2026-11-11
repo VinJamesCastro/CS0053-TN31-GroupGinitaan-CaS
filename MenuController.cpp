@@ -152,7 +152,7 @@ void registerAccount(BankData& data, const filesystem::path& path) {
     if (!cin) return;
     const string pin = getValidPin("New PIN (four or six digits): ");
     if (!cin) return;
-    const Money opening = getValidMoney("Opening deposit in centavos: ", 0);
+    const Money opening = getValidMoney("Opening deposit in PHP (e.g. 500.00): ", 0);
     if (!cin) return;
 
     const AccountType type = static_cast<AccountType>(product - 1);
@@ -182,7 +182,7 @@ void showSummary(const BankData& data, const Session& session) {
 
 void changeBalance(BankData& data, const Session& session,
                    const filesystem::path& path, bool isDeposit) {
-    const Money amount = getValidMoney("Amount in centavos: ", 1);
+    const Money amount = getValidMoney("Amount in PHP (e.g. 10.50): ", 1);
     if (!cin) return;
     const OperationResult result = commitChange(data, path, [&](BankData& candidate) {
         return isDeposit ? deposit(candidate, session.accountId, amount)
@@ -196,7 +196,7 @@ void transferFunds(BankData& data, const Session& session,
     string receiverId;
     cout << "Receiver account ID: ";
     if (!getline(cin, receiverId)) return;
-    const Money amount = getValidMoney("Amount in centavos: ", 1);
+    const Money amount = getValidMoney("Amount in PHP (e.g. 10.50): ", 1);
     if (!cin) return;
     const OperationResult result = commitChange(data, path, [&](BankData& candidate) {
         return transfer(candidate, session.accountId, receiverId, amount);
@@ -236,11 +236,13 @@ void showHistory(const BankData& data, const Session& session) {
     if (type != 0) filter.type = static_cast<TransactionType>(type - 1);
     const int useMinimum = getValidInt("Minimum amount filter? (0 No, 1 Yes): ", 0, 1);
     if (!cin) return;
-    if (useMinimum) filter.minAmountCents = getValidMoney("Minimum centavos: ", 0);
+    if (useMinimum)
+        filter.minAmountCents = getValidMoney("Minimum amount in PHP: ", 0);
     if (!cin) return;
     const int useMaximum = getValidInt("Maximum amount filter? (0 No, 1 Yes): ", 0, 1);
     if (!cin) return;
-    if (useMaximum) filter.maxAmountCents = getValidMoney("Maximum centavos: ", 0);
+    if (useMaximum)
+        filter.maxAmountCents = getValidMoney("Maximum amount in PHP: ", 0);
     if (!cin) return;
     if (filter.minAmountCents && filter.maxAmountCents &&
         *filter.minAmountCents > *filter.maxAmountCents) {

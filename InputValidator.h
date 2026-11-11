@@ -1,7 +1,7 @@
 #ifndef CAS_INPUT_VALIDATOR_H
 #define CAS_INPUT_VALIDATOR_H
 
-#include "BankModels.h"
+#include "BankModel.h"
 
 #include <string>
 
