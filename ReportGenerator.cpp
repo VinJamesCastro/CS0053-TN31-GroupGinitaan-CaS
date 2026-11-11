@@ -1,10 +1,11 @@
+#include "BankModel.h"
+
 #include <algorithm>
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
 #include <limits>
-#include <optional>
 #include <ostream>
 #include <sstream>
 #include <string>
@@ -12,73 +13,6 @@
 
 namespace cas
 {
-    using Money = std::int64_t;
-    enum class Role
-    {
-        Client,
-        Admin
-    };
-    enum class AccountType
-    {
-        Checking,
-        Savings,
-        TimeDeposit
-    };
-    enum class AccountStatus
-    {
-        Active,
-        Frozen,
-        Closed
-    };
-    enum class TransactionType
-    {
-        OpeningDeposit,
-        Deposit,
-        Withdrawal,
-        Transfer
-    };
-    enum class Currency
-    {
-        PHP,
-        USD,
-        EUR,
-        JPY
-    };
-
-    struct Account
-    {
-        std::string accountId;
-        std::string holderName;
-        std::string pinDigest;
-        Role role{};
-        AccountType type{};
-        AccountStatus status{};
-        Money balanceCents{};
-        Money minimumBalanceCents{};
-        int annualInterestBps{};
-    };
-    struct Transaction
-    {
-        std::string transactionId;
-        std::string occurredAt;
-        TransactionType type{};
-        std::string fromAccountId;
-        std::string toAccountId;
-        Money amountCents{};
-        Money fromBalanceAfterCents{};
-        Money toBalanceAfterCents{};
-    };
-    struct BankData
-    {
-        std::vector<Account> accounts;
-        std::vector<Transaction> transactions;
-    };
-    struct ReportResult
-    {
-        bool ok{};
-        std::string message;
-    };
-
     namespace
     {
         constexpr std::size_t chartWidth = 40;
