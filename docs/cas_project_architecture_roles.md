@@ -1,6 +1,6 @@
 # Cents and Sensibility (CaS): architecture and member roles
 
-CaS is a C++17 terminal banking application. This document assigns implementation ownership, explains how the modules cooperate, and gives each member a plan with at least three commits. The [shared development contract](cas_shared_development_contract.md) records the agreed type names, function interfaces, data format, and rules that let the four branches proceed in parallel.
+CaS is a C++17 terminal banking application. This document assigns implementation ownership and explains how the modules cooperate. The [shared development contract](cas_shared_development_contract.md) records the agreed type names, function interfaces, data format, and rules that let the four branches proceed in parallel.
 
 ## Architecture and parallel workflow
 
@@ -24,7 +24,7 @@ The project has no HTTP server or web endpoints. The Markdown contract records t
 | Member 3 | `feature/file-storage-validation` | `FileStorage.*`, `InputValidator.*`, persistence and history queries | Member 2 |
 | Member 4 | `feature/ascii-charts-reports` | `ReportGenerator.*`, charts and exports | Member 3 |
 
-Each member shall split their entire assigned work into **at least three meaningful commits** in one feature PR. The three milestones below for each member cover a usable module foundation, feature implementation, and cleanup; additional commits are allowed for distinct work or review fixes. The PR description should name the contract functions implemented and any known limitations. A reviewer checks behavior against the shared contract and requests changes in the author's branch. Shared integration fixes should be coordinated with the module owner so that branches do not introduce competing definitions.
+Each member opens one feature PR for their assigned work. The steps below cover a usable module foundation, feature implementation, and cleanup. The PR description should name the contract functions implemented and any known limitations. A reviewer checks behavior against the shared contract and requests changes in the author's branch. Shared integration fixes should be coordinated with the module owner so that branches do not introduce competing definitions.
 
 ## Member 1: menu, authentication, and integration
 
