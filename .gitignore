@@ -2,3 +2,5 @@
 *.o
 *.obj
 cas_app.exe
+/data/
+/reports/
