@@ -23,7 +23,7 @@ bool bootstrapAdmin(cas::BankData& data, const filesystem::path& snapshotPath) {
                        "First run: create an administrator account to secure this installation.");
     string name;
     while (true) {
-        cout << "Admin name: ";
+        cout << "\nAdmin name\n> " << flush;
         if (!getline(cin, name)) return false;
         if (name.find_first_not_of(" \t") != string::npos) break;
         cas::showUiMessage(cas::UiTone::Warning, "Administrator name is required.");

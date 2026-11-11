@@ -151,11 +151,22 @@ string compactChartLine(const string& line) {
 }
 
 string normalizedChoice(const string& input) {
-    if (input.empty() || !all_of(input.begin(), input.end(),
+    const size_t firstNonSpace = input.find_first_not_of(" \t\r\n");
+    if (firstNonSpace == string::npos) return "";
+    const size_t lastNonSpace = input.find_last_not_of(" \t\r\n");
+    const string trimmed = input.substr(firstNonSpace, lastNonSpace - firstNonSpace + 1);
+    if (!all_of(trimmed.begin(), trimmed.end(),
                                  [](unsigned char ch) { return isdigit(ch); }))
-        return input;
-    const size_t first = input.find_first_not_of('0');
-    return first == string::npos ? "0" : input.substr(first);
+        return trimmed;
+    const size_t first = trimmed.find_first_not_of('0');
+    return first == string::npos ? "0" : trimmed.substr(first);
+}
+
+void promptFor(const string& label) {
+    string cleanLabel = label;
+    while (!cleanLabel.empty() && (cleanLabel.back() == ' ' || cleanLabel.back() == ':'))
+        cleanLabel.pop_back();
+    cout << '\n' << cleanLabel << "\n> " << flush;
 }
 
 enum class SessionRole { Guest, Client, Admin };
@@ -201,7 +212,7 @@ const char* transactionTypeName(TransactionType type) {
 void showGuestMenu() {
     frame("CaS / GUEST", {"01  Login                         02  Register account",
                           "03  About CaS                     04  Exit"});
-    cout << "cas / guest > " << flush;
+    promptFor("Select an option (1-4)");
 }
 
 void showClientMenu(const string& accountId) {
@@ -212,13 +223,13 @@ void showClientMenu(const string& accountId) {
            "07  Balance chart               08  Export statement / receipt",
            "09  Logout                      10  Open another account",
            "11  Switch account"});
-    cout << "cas / client > " << flush;
+    promptFor("Select an option (1-11)");
 }
 
 void showAdminMenu() {
     frame("CaS / ADMIN", {"01  List accounts               02  Change account status",
                            "03  Read audit log              04  Logout"});
-    cout << "cas / admin > " << flush;
+    promptFor("Select an option (1-4)");
 }
 
 template <typename Change>
@@ -257,16 +268,17 @@ bool validDate(const string& date) {
 }
 
 bool readOptionalDate(const string& prompt, optional<string>& result) {
-    string value;
-    cout << prompt;
-    if (!getline(cin, value)) return false;
-    if (value.empty()) return true;
-    if (!validDate(value)) {
+    while (true) {
+        string value;
+        promptFor(prompt);
+        if (!getline(cin, value)) return false;
+        if (value.empty()) return true;
+        if (validDate(value)) {
+            result = value;
+            return true;
+        }
         showUiMessage(UiTone::Warning, "Enter a real date as YYYY-MM-DD.");
-        return false;
     }
-    result = value;
-    return true;
 }
 
 bool validReference(const string& value, const string& prefix) {
@@ -287,11 +299,11 @@ string utcNow() {
 
 void registerAccount(BankData& data, const filesystem::path& path) {
     string name;
-    cout << "Holder name: ";
-    if (!getline(cin, name)) return;
-    if (name.find_first_not_of(" \t") == string::npos) {
+    while (true) {
+        promptFor("Holder name");
+        if (!getline(cin, name)) return;
+        if (name.find_first_not_of(" \t") != string::npos) break;
         showUiMessage(UiTone::Warning, "Holder name is required.");
-        return;
     }
     const int product = getValidInt("Product (1 Checking, 2 Savings, 3 Time deposit): ", 1, 3);
     if (!cin) return;
@@ -357,7 +369,7 @@ void switchProfileAccount(const BankData& data, Session& session) {
           {"Account ID", "Type", "Status", "Balance"}, accounts,
           {12, 18, 12, 23});
     string selectedId;
-    cout << "Account ID to use: ";
+    promptFor("Account ID to use");
     if (!getline(cin, selectedId)) return;
     const auto selected = find_if(data.accounts.begin(), data.accounts.end(),
         [&](const Account& account) {
@@ -404,7 +416,7 @@ void changeBalance(BankData& data, const Session& session,
 void transferFunds(BankData& data, const Session& session,
                    const filesystem::path& path) {
     string receiverId;
-    cout << "Receiver account ID: ";
+    promptFor("Receiver account ID");
     if (!getline(cin, receiverId)) return;
     const Money amount = getValidMoney("Amount in PHP (e.g. 10.50): ", 1);
     if (!cin) return;
@@ -513,7 +525,7 @@ void exportReport(const BankData& data, const Session& session) {
     }
 
     string reference;
-    cout << "Transaction ID: ";
+    promptFor("Transaction ID");
     if (!getline(cin, reference)) return;
     const auto owned = find_if(data.transactions.begin(), data.transactions.end(),
         [&](const Transaction& row) {
@@ -545,7 +557,7 @@ void listAccounts(const BankData& data) {
 void changeStatus(BankData& data, const Session& session,
                   const filesystem::path& path) {
     string targetId;
-    cout << "Target account ID: ";
+    promptFor("Target account ID");
     if (!getline(cin, targetId)) return;
     const auto target = find_if(data.accounts.begin(), data.accounts.end(),
         [&](const Account& account) { return account.accountId == targetId; });
@@ -640,15 +652,7 @@ void showWelcomeScreen() {
         colorEnabled = true;
 #endif
     frame("WELCOME TO CENTS AND SENSIBILITY",
-          {"                           .-==============-.",
-           "                         .'   $   CaS   $    '.",
-           "                        / CENTS AND SENSIBILITY \\",
-           "                        |    SMART BANKING     |",
-           "                        \\ DOWN TO THE LAST CENT /",
-           "                         '.                  .'",
-           "                           '-==============-'",
-           "",
-           "Your money, your accounts, all in one place."}, UiTone::Success);
+          {"Manage accounts, transactions, and reports."}, UiTone::Success);
 }
 
 void showUiMessage(UiTone tone, const string& message) {
@@ -680,7 +684,7 @@ void runMenu(BankData& data, const filesystem::path& snapshotPath) {
         choice = normalizedChoice(choice);
         if (choice == "1") {
             string accountId;
-            cout << "Account ID: ";
+            promptFor("Account ID");
             if (!getline(cin, accountId)) return;
             const string pin = getValidPin("PIN (four or six digits): ");
             if (!cin) return;

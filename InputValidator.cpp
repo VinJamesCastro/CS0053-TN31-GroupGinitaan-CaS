@@ -79,7 +79,12 @@ std::string readLine(const std::string &prompt, bool hideInput = false) {
     std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
   }
 
-  std::cout << prompt << std::flush;
+  std::string label = prompt;
+  while (!label.empty() && (label.back() == ' ' || label.back() == ':'))
+    label.pop_back();
+  std::cout << '\n' << label;
+  if (hideInput) std::cout << " (digits hidden)";
+  std::cout << "\n> " << std::flush;
   HiddenInput hidden(hideInput);
 
   std::string text;
@@ -211,9 +216,11 @@ Money getValidMoney(const std::string &prompt, Money minInclusive) {
       return value;
     }
 
-    std::cout << "Enter a non-negative amount with at most two decimal "
-                 "places, without commas or currency symbols.\n"
-              << "Minimum: " << minInclusive << " centavos.\n";
+    std::cout << "Enter an amount with up to two decimal places, without "
+                 "commas or currency symbols.\n"
+              << "Minimum: PHP " << minInclusive / 100 << '.';
+    if (minInclusive % 100 < 10) std::cout << '0';
+    std::cout << minInclusive % 100 << ".\n";
   }
 }
 
