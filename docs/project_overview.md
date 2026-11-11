@@ -49,7 +49,7 @@ To satisfy course collaboration requirements, maintain peer accountability, and 
 ## 4. Prerequisites & Build Instructions
 
 ### Required Tools
-- **Compiler:** `g++` (C++17 or later)
+- **Compiler:** MSYS2 UCRT64 `g++` (C++17 or later) on Windows. Authentication uses Windows CNG and links against `bcrypt`.
 - **Editor:** VS Code with C/C++ Extensions
 - **Quality Tools:** `clang-format` and `clang-tidy` / `Cppcheck`
 - **Version Control:** Git & GitHub
@@ -58,10 +58,10 @@ To satisfy course collaboration requirements, maintain peer accountability, and 
 
 ```bash
 # Compile using G++
-g++ -std=c++17 -Wall main.cpp MenuController.cpp TransactionEngine.cpp FileStorage.cpp InputValidator.cpp ReportGenerator.cpp -o cas_app
+g++ -std=c++17 -Wall main.cpp MenuController.cpp TransactionEngine.cpp FileStorage.cpp InputValidator.cpp ReportGenerator.cpp Authentication.cpp -lbcrypt -o cas_app.exe
 
 # Run application
-./cas_app
+./cas_app.exe
 ```
 
 ---

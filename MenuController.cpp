@@ -125,7 +125,7 @@ bool readOptionalDate(const string& prompt, optional<string>& result) {
 }
 
 bool validReference(const string& value, const string& prefix) {
-    return value.size() == prefix.size() + 6 &&
+    return value.size() >= prefix.size() + 6 &&
            value.compare(0, prefix.size(), prefix) == 0 &&
            all_of(value.begin() + prefix.size(), value.end(),
                   [](unsigned char digit) { return isdigit(digit); });
@@ -209,9 +209,16 @@ void showFxQuote() {
     if (!cin) return;
     const int to = getValidInt("To (1 PHP, 2 USD, 3 EUR, 4 JPY): ", 1, 4);
     if (!cin) return;
-    const Money amount = getValidMoney("Input minor units: ", 1);
-    if (!cin) return;
-    const FxQuote quote = convertCurrency(amount, static_cast<Currency>(from - 1),
+    Money amount;
+    while (true) {
+        amount = getValidMoney("Amount in source currency (e.g. 1.00; whole units for JPY): ",
+                               from == 4 ? 100 : 1);
+        if (!cin) return;
+        if (from != 4 || amount % 100 == 0) break;
+        cout << "JPY amounts must be whole units.\n";
+    }
+    const Money inputMinorUnits = from == 4 ? amount / 100 : amount;
+    const FxQuote quote = convertCurrency(inputMinorUnits, static_cast<Currency>(from - 1),
                                           static_cast<Currency>(to - 1));
     if (!quote.ok) {
         cout << "FX quote unavailable.\n";
