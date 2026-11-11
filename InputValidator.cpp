@@ -7,8 +7,47 @@
 #include <string>
 #include <system_error>
 
+#ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#endif
+
 namespace cas {
 namespace {
+
+class HiddenInput {
+public:
+  explicit HiddenInput(bool requested) {
+#ifdef _WIN32
+    if (!requested) return;
+    handle_ = GetStdHandle(STD_INPUT_HANDLE);
+    if (handle_ == INVALID_HANDLE_VALUE || handle_ == nullptr) return;
+    if (!GetConsoleMode(handle_, &originalMode_)) return;
+    if (!SetConsoleMode(handle_, originalMode_ & ~ENABLE_ECHO_INPUT))
+      throw std::runtime_error("Cannot hide PIN input.");
+    active_ = true;
+#else
+    (void)requested;
+#endif
+  }
+
+  ~HiddenInput() {
+#ifdef _WIN32
+    if (active_) SetConsoleMode(handle_, originalMode_);
+#endif
+  }
+
+  bool active() const { return active_; }
+
+private:
+#ifdef _WIN32
+  HANDLE handle_ = nullptr;
+  DWORD originalMode_ = 0;
+#endif
+  bool active_ = false;
+};
 
 bool isDigit(char character) { return character >= '0' && character <= '9'; }
 
@@ -25,7 +64,7 @@ std::string trim(const std::string &text) {
   return text.substr(first, last - first + 1);
 }
 
-std::string readLine(const std::string &prompt) {
+std::string readLine(const std::string &prompt, bool hideInput = false) {
   if (std::cin.bad()) {
     throw std::runtime_error("Input stream is unavailable.");
   }
@@ -41,12 +80,16 @@ std::string readLine(const std::string &prompt) {
   }
 
   std::cout << prompt << std::flush;
+  HiddenInput hidden(hideInput);
 
   std::string text;
 
   if (!std::getline(std::cin, text)) {
+    if (hidden.active()) std::cout << '\n';
     throw std::runtime_error("Input was closed or could not be read.");
   }
+
+  if (hidden.active()) std::cout << '\n';
 
   return text;
 }
@@ -177,7 +220,7 @@ Money getValidMoney(const std::string &prompt, Money minInclusive) {
 std::string getValidPin(const std::string &prompt) {
   while (true) {
     // Do not trim PINs: spaces are not valid PIN characters.
-    const std::string pin = readLine(prompt);
+    const std::string pin = readLine(prompt, true);
     bool valid = pin.size() == 4 || pin.size() == 6;
 
     if (valid) {
