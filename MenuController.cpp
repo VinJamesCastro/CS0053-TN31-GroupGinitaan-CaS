@@ -393,7 +393,7 @@ void switchProfileAccount(const BankData& data, Session& session) {
           {"Account ID", "Type", "Status", "Balance"}, accounts,
           {12, 18, 12, 23});
     string selectedId;
-    promptFor("Account ID to use");
+    promptFor("Account ID to use (example: ACC-000001)");
     if (!getline(cin, selectedId)) return;
     const auto selected = find_if(data.accounts.begin(), data.accounts.end(),
         [&](const Account& account) {
@@ -443,7 +443,7 @@ void transferFunds(BankData& data, const Session& session,
                    const filesystem::path& path) {
     frame("TRANSFER FUNDS", {"From account: " + session.accountId});
     string receiverId;
-    promptFor("Receiver account ID");
+    promptFor("Receiver account ID (example: ACC-000001)");
     if (!getline(cin, receiverId)) return;
     const Money amount = getValidMoney("Amount in PHP (e.g. 10.50): ", 1);
     if (!cin) return;
@@ -588,7 +588,7 @@ void changeStatus(BankData& data, const Session& session,
                   const filesystem::path& path) {
     frame("CHANGE ACCOUNT STATUS", {"Enter the client account to update."});
     string targetId;
-    promptFor("Target account ID");
+    promptFor("Target account ID (example: ACC-000001)");
     if (!getline(cin, targetId)) return;
     const auto target = find_if(data.accounts.begin(), data.accounts.end(),
         [&](const Account& account) { return account.accountId == targetId; });
@@ -738,7 +738,9 @@ void runMenu(BankData& data, const filesystem::path& snapshotPath) {
         }
         choice = normalizedChoice(choice);
         if (choice == "1") {
-            frame("LOGIN", {"Enter your account ID and PIN."});
+            frame("LOGIN", {"Client ID example: ACC-000001",
+                            "Admin ID example: ADM-000001",
+                            "Format: three-letter prefix, hyphen, then at least six digits."});
             string accountId;
             promptFor("Account ID");
             if (!getline(cin, accountId)) return;
