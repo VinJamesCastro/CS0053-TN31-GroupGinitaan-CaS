@@ -79,6 +79,7 @@ std::string readLine(const std::string &prompt, bool hideInput = false) {
     std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
   }
 
+  if (!hideInput) prepareVisibleInput();
   std::string label = prompt;
   while (!label.empty() && (label.back() == ' ' || label.back() == ':'))
     label.pop_back();
@@ -182,6 +183,18 @@ bool parseMoney(const std::string &text, Money &value) {
   return true;
 }
 
+}
+
+void prepareVisibleInput() {
+#ifdef _WIN32
+  const HANDLE handle = GetStdHandle(STD_INPUT_HANDLE);
+  if (handle == INVALID_HANDLE_VALUE || handle == nullptr) return;
+  DWORD mode = 0;
+  if (!GetConsoleMode(handle, &mode)) return;
+  const DWORD visibleMode = mode | ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT;
+  if (visibleMode != mode && !SetConsoleMode(handle, visibleMode))
+    throw std::runtime_error("Cannot enable visible input.");
+#endif
 }
 
 int getValidInt(const std::string &prompt, int minInclusive, int maxInclusive) {

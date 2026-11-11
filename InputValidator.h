@@ -7,6 +7,8 @@
 
 namespace cas {
 
+void prepareVisibleInput();
+
 int getValidInt(const std::string& prompt,
                 int minInclusive,
                 int maxInclusive);

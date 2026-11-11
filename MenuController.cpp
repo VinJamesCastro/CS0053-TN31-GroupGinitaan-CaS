@@ -1,4 +1,5 @@
 #include "Authentication.h"
+#include "InputValidator.h"
 #include "MenuController.h"
 #include "TeamInterfaces.h"
 
@@ -163,6 +164,7 @@ string normalizedChoice(const string& input) {
 }
 
 void promptFor(const string& label) {
+    prepareVisibleInput();
     string cleanLabel = label;
     while (!cleanLabel.empty() && (cleanLabel.back() == ' ' || cleanLabel.back() == ':'))
         cleanLabel.pop_back();
