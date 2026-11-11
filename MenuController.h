@@ -11,6 +11,7 @@ enum class UiTone { Info, Success, Warning, Error };
 
 void showWelcomeScreen();
 void showUiMessage(UiTone tone, const std::string& message);
+void waitForContinue();
 
 void runMenu(BankData& data, const std::filesystem::path& snapshotPath);
 

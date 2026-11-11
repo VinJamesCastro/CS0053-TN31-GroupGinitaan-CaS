@@ -49,6 +49,25 @@ void resetColor() {
     if (colorEnabled) cout << "\x1b[0m" << flush;
 }
 
+void clearScreen() {
+#ifdef _WIN32
+    const HANDLE output = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (output == INVALID_HANDLE_VALUE || output == nullptr) return;
+    CONSOLE_SCREEN_BUFFER_INFO info{};
+    if (!GetConsoleScreenBufferInfo(output, &info)) return;
+    if (colorEnabled) {
+        cout << "\x1b[2J\x1b[H" << flush;
+        return;
+    }
+    const DWORD cells = static_cast<DWORD>(info.dwSize.X) * info.dwSize.Y;
+    const COORD origin{0, 0};
+    DWORD written = 0;
+    FillConsoleOutputCharacterA(output, ' ', cells, origin, &written);
+    FillConsoleOutputAttribute(output, info.wAttributes, cells, origin, &written);
+    SetConsoleCursorPosition(output, origin);
+#endif
+}
+
 string fitted(const string& value, size_t width) {
     if (value.size() <= width) return value + string(width - value.size(), ' ');
     if (width <= 3) return value.substr(0, width);
@@ -74,6 +93,7 @@ vector<string> wrapLine(const string& text) {
 }
 
 void frame(const string& title, const vector<string>& lines, UiTone tone = UiTone::Info) {
+    clearScreen();
     const string border = "+" + string(frameWidth - 2, '-') + "+";
     cout << '\n';
     setColor(tone);
@@ -300,6 +320,7 @@ string utcNow() {
 }
 
 void registerAccount(BankData& data, const filesystem::path& path) {
+    frame("REGISTER ACCOUNT", {"Create a new client account."});
     string name;
     while (true) {
         promptFor("Holder name");
@@ -333,6 +354,7 @@ void openLinkedAccount(BankData& data, const Session& session,
         showUiMessage(UiTone::Error, "Current client account is unavailable.");
         return;
     }
+    frame("OPEN ANOTHER ACCOUNT", {"The new account will share your profile and PIN."});
     const int product = getValidInt("Product (1 Checking, 2 Savings, 3 Time deposit): ", 1, 3);
     const Money opening = getValidMoney("Opening deposit in PHP: ", 0);
     const string profileId = current->profileId.empty() ? current->accountId : current->profileId;
@@ -406,6 +428,8 @@ void showSummary(const BankData& data, const Session& session) {
 
 void changeBalance(BankData& data, const Session& session,
                    const filesystem::path& path, bool isDeposit) {
+    frame(isDeposit ? "DEPOSIT FUNDS" : "WITHDRAW FUNDS",
+          {"Account: " + session.accountId});
     const Money amount = getValidMoney("Amount in PHP (e.g. 10.50): ", 1);
     if (!cin) return;
     const OperationResult result = commitChange(data, path, [&](BankData& candidate) {
@@ -417,6 +441,7 @@ void changeBalance(BankData& data, const Session& session,
 
 void transferFunds(BankData& data, const Session& session,
                    const filesystem::path& path) {
+    frame("TRANSFER FUNDS", {"From account: " + session.accountId});
     string receiverId;
     promptFor("Receiver account ID");
     if (!getline(cin, receiverId)) return;
@@ -429,6 +454,7 @@ void transferFunds(BankData& data, const Session& session,
 }
 
 void showFxQuote() {
+    frame("FX QUOTE", {"Estimate a currency conversion."});
     const int from = getValidInt("From (1 PHP, 2 USD, 3 EUR, 4 JPY): ", 1, 4);
     if (!cin) return;
     const int to = getValidInt("To (1 PHP, 2 USD, 3 EUR, 4 JPY): ", 1, 4);
@@ -454,6 +480,7 @@ void showFxQuote() {
 }
 
 void showHistory(const BankData& data, const Session& session) {
+    frame("TRANSACTION HISTORY FILTERS", {"Account: " + session.accountId});
     TransactionFilter filter;
     filter.accountId = session.accountId;
     if (!readOptionalDate("Start date (YYYY-MM-DD or blank): ", filter.startDate) ||
@@ -512,6 +539,7 @@ void showChart(const BankData& data, const Session& session) {
 }
 
 void exportReport(const BankData& data, const Session& session) {
+    frame("EXPORT REPORT", {"Account: " + session.accountId});
     const int kind = getValidInt("Export (1 Statement, 2 Receipt): ", 1, 2);
     if (!cin) return;
     if (kind == 1) {
@@ -558,6 +586,7 @@ void listAccounts(const BankData& data) {
 
 void changeStatus(BankData& data, const Session& session,
                   const filesystem::path& path) {
+    frame("CHANGE ACCOUNT STATUS", {"Enter the client account to update."});
     string targetId;
     promptFor("Target account ID");
     if (!getline(cin, targetId)) return;
@@ -623,6 +652,7 @@ void runClientMenu(BankData& data, Session& session, const filesystem::path& pat
             clearSession(session);
             showUiMessage(UiTone::Info, "You have signed out.");
         } else showUiMessage(UiTone::Warning, "Choose a menu option from 1 to 11.");
+        waitForContinue();
     }
 }
 
@@ -639,6 +669,7 @@ void runAdminMenu(BankData& data, Session& session, const filesystem::path& path
             clearSession(session);
             showUiMessage(UiTone::Info, "You have signed out.");
         } else showUiMessage(UiTone::Warning, "Choose a menu option from 1 to 4.");
+        waitForContinue();
     }
 }
 
@@ -665,6 +696,19 @@ void showUiMessage(UiTone tone, const string& message) {
     frame(title, {message}, tone);
 }
 
+void waitForContinue() {
+#ifdef _WIN32
+    const HANDLE input = GetStdHandle(STD_INPUT_HANDLE);
+    DWORD mode = 0;
+    if (input == INVALID_HANDLE_VALUE || input == nullptr ||
+        !GetConsoleMode(input, &mode)) return;
+#endif
+    if (!cin) return;
+    promptFor("Press Enter to continue");
+    string ignored;
+    getline(cin, ignored);
+}
+
 void runMenu(BankData& data, const filesystem::path& snapshotPath) {
     Session session;
     string choice;
@@ -685,6 +729,7 @@ void runMenu(BankData& data, const filesystem::path& snapshotPath) {
         }
         choice = normalizedChoice(choice);
         if (choice == "1") {
+            frame("LOGIN", {"Enter your account ID and PIN."});
             string accountId;
             promptFor("Account ID");
             if (!getline(cin, accountId)) return;
@@ -693,6 +738,7 @@ void runMenu(BankData& data, const filesystem::path& snapshotPath) {
             const LoginResult result = login(data, accountId, pin);
             if (!result.ok) {
                 showUiMessage(UiTone::Error, result.message);
+                waitForContinue();
                 continue;
             }
             session.accountId = result.accountId;
@@ -709,6 +755,7 @@ void runMenu(BankData& data, const filesystem::path& snapshotPath) {
             showUiMessage(UiTone::Info, "Thanks for banking with CaS. Goodbye!");
             return;
         } else showUiMessage(UiTone::Warning, "Choose a menu option from 1 to 4.");
+        waitForContinue();
     }
 }
 

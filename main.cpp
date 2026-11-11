@@ -51,6 +51,7 @@ bool bootstrapAdmin(cas::BankData& data, const filesystem::path& snapshotPath) {
     data = move(candidate);
     cas::showUiMessage(cas::UiTone::Success,
                        "Administrator account saved. Account ID: ADM-000001");
+    cas::waitForContinue();
     return true;
 }
 
@@ -59,6 +60,7 @@ bool bootstrapAdmin(cas::BankData& data, const filesystem::path& snapshotPath) {
 int main() {
     try {
         cas::showWelcomeScreen();
+        cas::waitForContinue();
         const filesystem::path snapshotPath = "data/bank_state.txt";
         error_code fileError;
         const bool snapshotExists = filesystem::exists(snapshotPath, fileError);
