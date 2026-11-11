@@ -12,7 +12,7 @@
 ### Project Overview
 While traditional banking institutions often bog down customers with bloated interfaces, hidden fees, and bureaucratic delays, **Cents and Sensibility (CaS)** offers a refreshing, streamlined alternative that puts clarity, speed, and safety first. Built on the principle that modern finance should be both mathematically precise and user-centric, CaS delivers a complete banking experience without the noise. Clients can seamlessly oversee multiple account types—from standard checking to high-yield savings and time deposits—all under a single unified profile. Whether performing real-time deposits, withdrawals, or instant peer-to-peer transfers, users operate within a protected ecosystem backed by multi-tier authentication and strict role-based access controls for both clients and administrators.
 
-Beyond basic ledger operations, **Cents and Sensibility** equips users with clear financial visibility that leaves conventional bank records behind. Account holders can query and filter their transaction history by date or amount, analyze monthly balance fluctuations using visual terminal charts, and calculate multi-currency conversions across PHP, USD, EUR, and JPY. When official documentation is required, the system instantly formats clean, printable account statements and receipts. By combining bulletproof input safety with automated financial tools, **Cents and Sensibility** proves that managing your wealth doesn't require endless red tape—just smart tools, total transparency, and a little common sense.
+Beyond basic ledger operations, **Cents and Sensibility** equips users with clear financial visibility that leaves conventional bank records behind. Account holders can query and filter their transaction history by date or amount, view transaction-by-transaction balance changes using visual terminal charts, and calculate multi-currency conversions across PHP, USD, EUR, and JPY. When official documentation is required, the system instantly formats clean, printable account statements and receipts. By combining bulletproof input safety with automated financial tools, **Cents and Sensibility** proves that managing your wealth doesn't require endless red tape—just smart tools, total transparency, and a little common sense.
 
 ---
 
@@ -104,6 +104,7 @@ cas / guest › 01
 │  03  Withdraw funds          07  Balance chart                     │
 │  04  Transfer funds          08  Export statement / receipt        │
 │  09  Logout                                                        │
+│  10  Open another account       11  Switch account                │
 ╰────────────────────────────────────────────────────────────────────╯
 
 cas / client › 02

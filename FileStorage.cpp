@@ -134,7 +134,7 @@ struct PathCleanup {
 };
 
 bool writeSnapshot(std::ostream& output, const BankData& data) {
-    output << "CAS_SNAPSHOT 1\n";
+    output << "CAS_SNAPSHOT 2\n";
 
     for (const Account& account : data.accounts) {
         output << "ACCOUNT "
@@ -146,7 +146,8 @@ bool writeSnapshot(std::ostream& output, const BankData& data) {
                << static_cast<int>(account.status) << ' '
                << account.balanceCents << ' '
                << account.minimumBalanceCents << ' '
-               << account.annualInterestBps << '\n';
+               << account.annualInterestBps << ' '
+               << encodeText(account.profileId) << '\n';
     }
 
     for (const Transaction& transaction : data.transactions) {
@@ -275,8 +276,8 @@ bool hasNoExtraFields(std::istream& input) {
     return input.eof();
 }
 
-bool parseAccount(std::istream& input, Account& account) {
-    return readText(input, account.accountId) &&
+bool parseAccount(std::istream& input, Account& account, int version) {
+    const bool fieldsValid = readText(input, account.accountId) &&
            readText(input, account.holderName) &&
            readText(input, account.pinDigest) &&
            readEnum(input, 1, account.role) &&
@@ -284,8 +285,14 @@ bool parseAccount(std::istream& input, Account& account) {
            readEnum(input, 2, account.status) &&
            readInteger(input, account.balanceCents) &&
            readInteger(input, account.minimumBalanceCents) &&
-           readInteger(input, account.annualInterestBps) &&
-           hasNoExtraFields(input);
+           readInteger(input, account.annualInterestBps);
+    if (!fieldsValid) return false;
+    if (version == 2) {
+        if (!readText(input, account.profileId) || account.profileId.empty()) return false;
+    } else {
+        account.profileId = account.accountId;
+    }
+    return hasNoExtraFields(input);
 }
 
 bool isValidUtcTimestamp(const std::string& timestamp);
@@ -332,13 +339,13 @@ LoadResult loadSnapshot(const std::filesystem::path& path) {
         return {false, {}, "Existing snapshot is empty or unreadable."};
     }
 
+    int version = 0;
     {
         std::istringstream header(line);
         std::string marker;
-        int version = 0;
 
         if (!(header >> marker) || marker != "CAS_SNAPSHOT" ||
-            !readInteger(header, version) || version != 1 ||
+            !readInteger(header, version) || (version != 1 && version != 2) ||
             !hasNoExtraFields(header)) {
             return loadError(1, "Invalid header or unsupported version.");
         }
@@ -366,7 +373,7 @@ LoadResult loadSnapshot(const std::filesystem::path& path) {
         if (recordType == "ACCOUNT") {
             Account account{};
 
-            if (!parseAccount(record, account)) {
+            if (!parseAccount(record, account, version)) {
                 return loadError(lineNumber, "Invalid ACCOUNT record.");
             }
 
@@ -414,6 +421,20 @@ LoadResult loadSnapshot(const std::filesystem::path& path) {
 
     if (!foundEnd) {
         return {false, {}, "Snapshot is incomplete: missing END record."};
+    }
+
+    for (const Account& account : candidate.accounts) {
+        if (account.profileId.empty()) {
+            return {false, {}, "Account has no profile ID."};
+        }
+        if (account.role != Role::Client) continue;
+        const auto root = std::find_if(candidate.accounts.begin(), candidate.accounts.end(),
+            [&](const Account& other) {
+                return other.accountId == account.profileId && other.role == Role::Client;
+            });
+        if (root == candidate.accounts.end() || root->pinDigest != account.pinDigest) {
+            return {false, {}, "Client profile reference or PIN digest is inconsistent."};
+        }
     }
 
     return {true, std::move(candidate), "Snapshot loaded successfully."};

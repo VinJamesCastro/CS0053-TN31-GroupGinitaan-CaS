@@ -68,6 +68,7 @@ void showClientMenu() {
          << "1. Account summary\n2. Deposit\n3. Withdraw\n4. Transfer\n"
          << "5. FX quote\n6. Transaction history\n7. Balance chart\n"
          << "8. Export statement or receipt\n9. Logout\n"
+         << "10. Open another account\n11. Switch account\n"
          << "Choose an option: ";
 }
 
@@ -164,6 +165,64 @@ void registerAccount(BankData& data, const filesystem::path& path) {
         return created;
     });
     showOperation(result); // A new ID appears only after the snapshot was saved.
+}
+
+void openLinkedAccount(BankData& data, const Session& session,
+                       const filesystem::path& path) {
+    const auto current = find_if(data.accounts.begin(), data.accounts.end(),
+        [&](const Account& account) { return account.accountId == session.accountId; });
+    if (current == data.accounts.end() || current->role != Role::Client) {
+        cout << "Current client account is unavailable.\n";
+        return;
+    }
+    const int product = getValidInt("Product (1 Checking, 2 Savings, 3 Time deposit): ", 1, 3);
+    const Money opening = getValidMoney("Opening deposit in PHP: ", 0);
+    const string profileId = current->profileId.empty() ? current->accountId : current->profileId;
+    const string holderName = current->holderName;
+    const string pinDigest = current->pinDigest;
+    const OperationResult result = commitChange(data, path, [&](BankData& candidate) {
+        OperationResult created = createAccount(candidate, holderName,
+            static_cast<AccountType>(product - 1), pinDigest, opening);
+        if (!created.ok) return created;
+        const auto linked = find_if(candidate.accounts.begin(), candidate.accounts.end(),
+            [&](const Account& account) { return account.accountId == created.referenceId; });
+        if (linked == candidate.accounts.end())
+            return OperationResult{false, "New account was not found after creation.", ""};
+        linked->profileId = profileId;
+        return created;
+    });
+    showOperation(result);
+}
+
+void switchProfileAccount(const BankData& data, Session& session) {
+    const auto current = find_if(data.accounts.begin(), data.accounts.end(),
+        [&](const Account& account) { return account.accountId == session.accountId; });
+    if (current == data.accounts.end() || current->role != Role::Client) {
+        cout << "Current client account is unavailable.\n";
+        return;
+    }
+    const string profileId = current->profileId.empty() ? current->accountId : current->profileId;
+    cout << "Accounts in profile " << profileId << ":\n";
+    for (const Account& account : data.accounts) {
+        if (account.role == Role::Client && account.profileId == profileId &&
+            account.pinDigest == current->pinDigest)
+            cout << account.accountId << "  " << accountTypeName(account.type)
+                 << "  " << statusName(account.status) << '\n';
+    }
+    string selectedId;
+    cout << "Account ID to use: ";
+    if (!getline(cin, selectedId)) return;
+    const auto selected = find_if(data.accounts.begin(), data.accounts.end(),
+        [&](const Account& account) {
+            return account.accountId == selectedId && account.role == Role::Client &&
+                   account.profileId == profileId && account.pinDigest == current->pinDigest;
+        });
+    if (selected == data.accounts.end()) {
+        cout << "Account is not in this profile.\n";
+        return;
+    }
+    session.accountId = selectedId;
+    cout << "Using account " << selectedId << ".\n";
 }
 
 void showSummary(const BankData& data, const Session& session) {
@@ -375,10 +434,12 @@ void runClientMenu(BankData& data, Session& session, const filesystem::path& pat
         else if (choice == "6") showHistory(data, session);
         else if (choice == "7") showChart(data, session);
         else if (choice == "8") exportReport(data, session);
+        else if (choice == "10") openLinkedAccount(data, session, path);
+        else if (choice == "11") switchProfileAccount(data, session);
         else if (choice == "9") {
             clearSession(session);
             cout << "Logged out.\n";
-        } else cout << "Invalid choice. Please enter 1 to 9.\n";
+        } else cout << "Invalid choice. Please enter 1 to 11.\n";
     }
 }
 

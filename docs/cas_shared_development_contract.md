@@ -17,6 +17,7 @@ enum class Currency { PHP, USD, EUR, JPY };
 
 struct Account {
     std::string accountId;       // ACC-000001 for a client
+    std::string profileId;       // Shared by accounts under one client profile
     std::string holderName;
     std::string pinDigest;       // Opaque to storage and business logic
     Role role;
@@ -136,7 +137,8 @@ Member 1 verifies the PIN digest and checks the role before calling a protected 
 
 | Flow | Contract |
 | --- | --- |
-| Registration | Member 1 validates the name, product, PIN, and initial deposit; `createAccount` assigns the ID, product constants, and an `OpeningDeposit` transaction when the deposit is positive. Success is shown only after Member 3 saves the candidate snapshot. |
+| Registration | Member 1 validates the name, product, PIN, and initial deposit; `createAccount` assigns the ID, sets it as the first `profileId`, applies product constants, and adds an `OpeningDeposit` transaction when the deposit is positive. Success is shown only after Member 3 saves the candidate snapshot. |
+| Additional account | An authenticated client can open another product under the current profile using the same holder and PIN digest. Member 1 assigns the existing `profileId` to the new account in the candidate snapshot before saving. Switching is restricted to accounts with the same profile ID and PIN digest. |
 | Deposit | An active client account and a positive amount are required. Check for `Money` overflow. Add one `Deposit` row with the new balance. |
 | Withdrawal | An active client account and a positive amount are required. The resulting balance must be at least `minimumBalanceCents`. Add one `Withdrawal` row. |
 | Transfer | Sender and receiver must be different active client accounts. Validate both IDs, amount, overflow, and sender floor before changing either balance. Add one `Transfer` row with both IDs and both resulting balances. |
@@ -160,7 +162,7 @@ currentBankData = move(candidate); show success
 
 ## Files and persistence
 
-`data/bank_state.txt` is the **single authoritative snapshot** for both accounts and transactions. It starts with a version header and contains `ACCOUNT` and `TRANSACTION` records. Member 3 defines text-field escaping beside the serializer and round-trips every shared-model field exactly. Unknown versions, invalid enums, duplicate IDs, and truncated records are load errors; a missing file means a new installation. Do not overwrite a malformed existing file with an empty state.
+`data/bank_state.txt` is the **single authoritative snapshot** for both accounts and transactions. It starts with a version header and contains `ACCOUNT` and `TRANSACTION` records. Version 2 appends an encoded `profileId` after `annualInterestBps` in each account record. Version 1 snapshots load with each account in its own profile and are upgraded on the next save. Member 3 defines text-field escaping beside the serializer and round-trips every shared-model field exactly. Unknown versions, invalid enums, duplicate IDs, and truncated records are load errors; a missing file means a new installation. Do not overwrite a malformed existing file with an empty state.
 
 `saveSnapshot` writes a complete temporary file in the same directory, closes and checks it, then replaces the authoritative snapshot. A failed temporary write leaves the old snapshot readable. Member 3 appends status-change audit entries to `data/audit.log` when Member 1 calls `appendAuditLog` after a successful snapshot save. If audit append fails, Member 1 reports that the status change was saved but its audit entry was not; it must not claim the status change was rolled back. Reports go to `reports/Statement_<accountId>.txt` and `reports/Receipt_<transactionId>.txt`; Member 4 creates that directory as needed. No module embeds an absolute machine-specific path.
 

@@ -32,6 +32,7 @@ bool bootstrapAdmin(cas::BankData& data, const filesystem::path& snapshotPath) {
     cas::BankData candidate = data;
     cas::Account admin;
     admin.accountId = "ADM-000001";
+    admin.profileId = admin.accountId;
     admin.holderName = name;
     admin.pinDigest = cas::digestPin(pin);
     admin.role = cas::Role::Admin;

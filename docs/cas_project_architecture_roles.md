@@ -28,7 +28,7 @@ Each member shall split their entire assigned work into **at least three meaning
 
 ## Member 1: menu, authentication, and integration
 
-Build the entry point and state-driven guest, client, and admin menus. Guest actions are login, registration, About, and exit. Clients can view their own summary, deposit, withdraw, transfer, view an FX quote and filtered history, see a chart, export a statement or receipt, and log out. Admins can list accounts, change account status, read the audit log, and log out. An invalid choice returns to the current menu; logout clears the account ID and role.
+Build the entry point and state-driven guest, client, and admin menus. Guest actions are login, registration, About, and exit. Clients can view their own summary, deposit, withdraw, transfer, view an FX quote and filtered history, see a chart, export a statement or receipt, open another account in their profile, switch between their profile's accounts, and log out. Admins can list accounts, change account status, read the audit log, and log out. An invalid choice returns to the current menu; logout clears the account ID and role.
 
 Member 1 owns authentication, role checks, and call order. It uses Member 3's validators to collect input; Member 2's operations to change a candidate snapshot; Member 3's save function to persist it; and Member 4's read-only functions for visual output. A client action must use the authenticated account ID rather than trusting an arbitrary ID entered at the prompt. The registration flow must return the newly assigned account ID to the user after a successful save.
 
@@ -78,4 +78,4 @@ Defects in another member's module should be reported to that owner and fixed in
 
 After review and merge, build with C++17 and complete this workflow: register, restart, log in, deposit, withdraw, transfer, filter history, draw a chart, export a statement and receipt, change status as admin, and confirm rejected actions leave the saved snapshot intact. The cyclic review chain is Member 1 reviews Member 2, Member 2 reviews Member 3, Member 3 reviews Member 4, and Member 4 reviews Member 1.
 
-Source filenames above describe planned ownership, not existing implementation on `main`.
+The source files for all four modules are present on `main`.

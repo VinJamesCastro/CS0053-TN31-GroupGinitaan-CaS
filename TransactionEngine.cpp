@@ -342,6 +342,7 @@ namespace cas
 
         Account account{};
         account.accountId = accountId;
+        account.profileId = accountId;
         account.holderName = holderName;
         account.pinDigest = pinDigest;
         account.role = Role::Client;

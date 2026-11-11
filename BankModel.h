@@ -19,6 +19,7 @@ enum class Currency { PHP, USD, EUR, JPY };
 
 struct Account {
     std::string accountId; // Client IDs use ACC-000001, ACC-000002, etc.
+    std::string profileId; // Shared by client accounts in one profile.
     std::string holderName;
     std::string pinDigest; // Supplied by authentication; the engine stores it unchanged.
     Role role = Role::Client;
