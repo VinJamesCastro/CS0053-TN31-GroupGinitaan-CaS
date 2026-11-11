@@ -14,17 +14,19 @@ namespace {
 
 bool bootstrapAdmin(cas::BankData& data, const filesystem::path& snapshotPath) {
     if (!data.accounts.empty() || !data.transactions.empty()) {
-        cerr << "First-run data was not empty. Admin setup stopped.\n";
+        cas::showUiMessage(cas::UiTone::Error,
+                           "First-run data was not empty. Admin setup stopped.");
         return false;
     }
 
-    cout << "First run: create an administrator account.\n";
+    cas::showUiMessage(cas::UiTone::Info,
+                       "First run: create an administrator account to secure this installation.");
     string name;
     while (true) {
         cout << "Admin name: ";
         if (!getline(cin, name)) return false;
         if (name.find_first_not_of(" \t") != string::npos) break;
-        cout << "Administrator name is required.\n";
+        cas::showUiMessage(cas::UiTone::Warning, "Administrator name is required.");
     }
     const string pin = cas::getValidPin("New admin PIN (four or six digits): ");
     if (!cin) return false;
@@ -40,11 +42,13 @@ bool bootstrapAdmin(cas::BankData& data, const filesystem::path& snapshotPath) {
 
     const cas::SaveResult saved = cas::saveSnapshot(snapshotPath, candidate);
     if (!saved.ok) {
-        cerr << "Admin setup was not saved: " << saved.message << '\n';
+        cas::showUiMessage(cas::UiTone::Error,
+                           "Admin setup was not saved: " + saved.message);
         return false;
     }
     data = move(candidate);
-    cout << "Administrator account saved. Account ID: ADM-000001\n";
+    cas::showUiMessage(cas::UiTone::Success,
+                       "Administrator account saved. Account ID: ADM-000001");
     return true;
 }
 
@@ -52,11 +56,13 @@ bool bootstrapAdmin(cas::BankData& data, const filesystem::path& snapshotPath) {
 
 int main() {
     try {
+        cas::showWelcomeScreen();
         const filesystem::path snapshotPath = "data/bank_state.txt";
         error_code fileError;
         const bool snapshotExists = filesystem::exists(snapshotPath, fileError);
         if (fileError) {
-            cerr << "Cannot check bank data: " << fileError.message() << '\n';
+            cas::showUiMessage(cas::UiTone::Error,
+                               "Cannot check bank data: " + fileError.message());
             return 1;
         }
 
@@ -64,14 +70,16 @@ int main() {
         if (snapshotExists) {
             cas::LoadResult loaded = cas::loadSnapshot(snapshotPath);
             if (!loaded.ok) {
-                cerr << "Cannot load bank data: " << loaded.message << '\n';
+                cas::showUiMessage(cas::UiTone::Error,
+                                   "Cannot load bank data: " + loaded.message);
                 return 1;
             }
             data = move(loaded.data);
         } else {
             filesystem::create_directories(snapshotPath.parent_path(), fileError);
             if (fileError) {
-                cerr << "Cannot create data directory: " << fileError.message() << '\n';
+                cas::showUiMessage(cas::UiTone::Error,
+                                   "Cannot create data directory: " + fileError.message());
                 return 1;
             }
             if (!bootstrapAdmin(data, snapshotPath)) return 1;
@@ -80,7 +88,8 @@ int main() {
         cas::runMenu(data, snapshotPath);
         return 0;
     } catch (const exception& error) {
-        cerr << "Cannot continue: " << error.what() << '\n';
+        cas::showUiMessage(cas::UiTone::Error,
+                           "Cannot continue: " + string(error.what()));
         return 1;
     }
 }
