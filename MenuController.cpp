@@ -554,8 +554,26 @@ void exportReport(const BankData& data, const Session& session) {
         return;
     }
 
+    TransactionFilter filter;
+    filter.accountId = session.accountId;
+    const vector<Transaction> transactions = filterTransactions(data, filter);
+    if (transactions.empty()) {
+        showUiMessage(UiTone::Info, "This account has no transactions to export as a receipt.");
+        return;
+    }
+
+    vector<vector<string>> rows;
+    for (auto it = transactions.rbegin(); it != transactions.rend(); ++it) {
+        const bool credit = it->toAccountId == session.accountId;
+        rows.push_back({it->transactionId, it->occurredAt.substr(0, 10),
+                        transactionTypeName(it->type),
+                        string(credit ? "+" : "-") + moneyText(it->amountCents)});
+    }
+    table("CHOOSE A TRANSACTION / " + session.accountId,
+          {"Reference", "Date", "Type", "Amount"}, rows,
+          {24, 10, 15, 16});
     string reference;
-    promptFor("Transaction ID");
+    promptFor("Transaction ID (copy a reference above)");
     if (!getline(cin, reference)) return;
     const auto owned = find_if(data.transactions.begin(), data.transactions.end(),
         [&](const Transaction& row) {
