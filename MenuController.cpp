@@ -239,12 +239,12 @@ void showGuestMenu() {
 
 void showClientMenu(const string& accountId) {
     frame("CaS / CLIENT / " + accountId,
-          {"01  Account summary             02  Deposit funds",
-           "03  Withdraw funds              04  Transfer funds",
-           "05  FX quote                    06  Transaction history",
-           "07  Balance chart               08  Export statement / receipt",
-           "09  Logout                      10  Open another account",
-           "11  Switch account"});
+          {fitted("01  Account summary", 34) + "  07  Balance chart",
+           fitted("02  Deposit funds", 34) + "  08  Export statement / receipt",
+           fitted("03  Withdraw funds", 34) + "  09  Logout",
+           fitted("04  Transfer funds", 34) + "  10  Open another account",
+           fitted("05  FX quote", 34) + "  11  Switch account",
+           "06  Transaction history"});
     promptFor("Select an option (1-11)");
 }
 
@@ -685,7 +685,16 @@ void showWelcomeScreen() {
         colorEnabled = true;
 #endif
     frame("WELCOME TO CENTS AND SENSIBILITY",
-          {"Manage accounts, transactions, and reports."}, UiTone::Success);
+          {"                ______________",
+           "    __,.,---'''''              '''''---..._",
+           " ,-'             .....:::''::.:            '`-.",
+           "'           ...:::.....       '",
+           "            ''':::'''''       .               ,",
+           "|'-.._           ''''':::..::':          __,,-",
+           " '-.._''`---.....______________.....---''__,,-",
+           "      ''`---.....______________.....---''",
+           "",
+           "Manage accounts, transactions, and reports."}, UiTone::Success);
 }
 
 void showUiMessage(UiTone tone, const string& message) {
