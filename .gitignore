@@ -2,5 +2,9 @@
 *.o
 *.obj
 cas_app.exe
+cas_app
 /data/
 /reports/
+
+run.ps1
+run.zsh
